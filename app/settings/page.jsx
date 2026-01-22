@@ -33,7 +33,13 @@ function SettingsContent() {
     return (
         <div className="settings-container">
             <header className="settings-header">
-                <Link href="/" className="back-link">← Retour</Link>
+                <Link href="/" className="back-link">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Retour
+                </Link>
                 <h1>Paramètres</h1>
             </header>
 
@@ -50,7 +56,7 @@ function SettingsContent() {
             </section>
 
             <section className="settings-section">
-                <h2>Notifications Sonores</h2>
+                <h2>Notifications sonores</h2>
                 <div className="setting-row">
                     <label>Activer le son</label>
                     <input 

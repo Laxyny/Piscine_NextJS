@@ -81,7 +81,7 @@ export default function AgentsModal({ user, onClose, onSelectAgent }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{view === 'list' ? 'Mes GPTs Personnalisés' : (editingAgent ? 'Modifier le GPT' : 'Nouveau GPT')}</h2>
+          <h2>{view === 'list' ? 'Mes GPTs personnalisés' : (editingAgent ? 'Modifier le GPT' : 'Nouveau GPT')}</h2>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
 
@@ -103,8 +103,13 @@ export default function AgentsModal({ user, onClose, onSelectAgent }) {
                         <p>{agent.description}</p>
                       </div>
                       <div className="agent-actions">
-                        <button onClick={(e) => { e.stopPropagation(); startEdit(agent); }} className="edit-agent-btn">✎</button>
-                        <button onClick={(e) => handleDelete(e, agent.id)} className="delete-agent-btn">🗑️</button>
+                        <button onClick={(e) => { e.stopPropagation(); startEdit(agent); }} className="edit-btn" title="Modifier">✎</button>
+                        <button onClick={(e) => handleDelete(e, agent.id)} className="delete-btn" title="Supprimer">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   ))}
