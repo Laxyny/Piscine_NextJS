@@ -15,6 +15,7 @@ export default function Chat() {
   const { messages, loading: chatLoading, sendMessage } = useChat(currentChatId);
 
   const [input, setInput] = useState('');
+  const [isImageMode, setIsImageMode] = useState(false);
   const messagesEndRef = useRef(null);
   const prevMessagesLength = useRef(0);
   const db = getFirestore(getApp());
@@ -62,7 +63,7 @@ export default function Chat() {
 
     const msgContent = input;
     setInput('');
-    await sendMessage(msgContent, targetChatId);
+    await sendMessage(msgContent, targetChatId, isImageMode ? 'image' : 'text');
   };
 
   if (authLoading) return <div className="loading">Chargement...</div>;
@@ -108,6 +109,7 @@ export default function Chat() {
                   role={msg.role}
                   content={msg.content}
                   time={msg.createdAt}
+                  type={msg.type}
                 />
               ))}
 
@@ -122,11 +124,20 @@ export default function Chat() {
             </div>
 
             <form onSubmit={handleSubmit} className="chat-form">
+              <button
+                type="button"
+                onClick={() => setIsImageMode(!isImageMode)}
+                className={`mode-toggle-btn ${isImageMode ? 'active' : ''}`}
+                title={isImageMode ? "Passer en mode Texte" : "Passer en mode Image"}
+              >
+                {isImageMode ? '🎨' : '📝'}
+              </button>
+
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Posez votre question..."
+                placeholder={isImageMode ? "Décrivez l'image à générer..." : "Posez votre question..."}
                 disabled={chatLoading}
                 className="chat-input"
               />

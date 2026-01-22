@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../backend/lib/db';
 import { collection, getDocs, addDoc, orderBy, query, limit, doc, updateDoc } from "firebase/firestore";
 
-// Helper to generate title
 async function generateTitle(firstMessage, apiKey) {
     try {
         const res = await fetch('https://api.x.ai/v1/chat/completions', {
@@ -22,11 +21,10 @@ async function generateTitle(firstMessage, apiKey) {
         const data = await res.json();
         let title = data.choices[0]?.message?.content || 'Nouvelle discussion';
         
-        // Cleaning
-        title = title.replace(/^["']|["']$/g, ''); // Remove quotes
-        title = title.replace(/^Title:\s*/i, ''); // Remove "Title:" prefix
+        title = title.replace(/^["']|["']$/g, '');
+        title = title.replace(/^Title:\s*/i, '');
         
-        return title.substring(0, 50); // Hard limit length
+        return title.substring(0, 50);
     } catch {
         return 'Nouvelle discussion';
     }
@@ -57,13 +55,12 @@ export async function GET(request) {
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { content, chatId } = body;
+        const { content, chatId, mode = 'text' } = body;
 
         if (!chatId || !content) return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
 
         const messagesRef = collection(db, "chats", chatId, "messages");
 
-        // 1. History
         const historyQuery = query(messagesRef, orderBy("createdAt", "desc"), limit(30));
         const historySnapshot = await getDocs(historyQuery);
         const history = [];
@@ -75,53 +72,87 @@ export async function POST(request) {
 
         const isFirstMessage = history.length === 0;
 
-        // 2. Save User Msg
         await addDoc(messagesRef, {
             content: content,
             role: 'user',
+            type: 'text',
             createdAt: new Date().toISOString(),
         });
 
-        // 3. Auto-Title if first message
         const apiKey = process.env.GROK_API_KEY;
         if (isFirstMessage && apiKey) {
              const title = await generateTitle(content, apiKey);
              await updateDoc(doc(db, "chats", chatId), { title: title });
         }
 
-        // 4. AI Response
-        const messagesPayload = [
-            { role: 'system', content: 'Tu es un assistant utile et professionnel. Tu utilises le Markdown pour formater tes réponses, surtout pour le code.' },
-            ...history,
-            { role: 'user', content: content }
-        ];
+        let aiContent = '';
+        let messageType = 'text';
 
-        const grokResponse = await fetch('https://api.x.ai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                messages: messagesPayload,
-                model: 'grok-4-latest',
-                stream: false,
-                temperature: 0.7
-            }),
-        });
+        if (mode === 'image') {
+            const imageResponse = await fetch('https://api.x.ai/v1/images/generations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                    prompt: content,
+                    model: 'grok-2-image-1212',
+                    response_format: 'url'
+                }),
+            });
 
-        if (!grokResponse.ok) throw new Error('AI Error');
+            if (!imageResponse.ok) {
+                const errData = await imageResponse.text();
+                console.error('Image Gen Error:', errData);
+                throw new Error('Image generation failed');
+            }
 
-        const grokData = await grokResponse.json();
-        const aiContent = grokData.choices[0]?.message?.content || 'Error generation';
+            const imageData = await imageResponse.json();
+            aiContent = imageData.data[0]?.url;
+            messageType = 'image';
+
+        } else {
+            const messagesPayload = [
+                { role: 'system', content: 'Tu es un assistant utile et professionnel. Tu utilises le Markdown pour formater tes réponses, surtout pour le code.' },
+                ...history,
+                { role: 'user', content: content }
+            ];
+
+            const grokResponse = await fetch('https://api.x.ai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                    messages: messagesPayload,
+                    model: 'grok-4-latest',
+                    stream: false,
+                    temperature: 0.7
+                }),
+            });
+
+            if (!grokResponse.ok) throw new Error('AI Error');
+
+            const grokData = await grokResponse.json();
+            aiContent = grokData.choices[0]?.message?.content || 'Error generation';
+        }
 
         const aiDocRef = await addDoc(messagesRef, {
             content: aiContent,
             role: 'assistant',
+            type: messageType,
             createdAt: new Date().toISOString(),
         });
 
-        return NextResponse.json({ id: aiDocRef.id, content: aiContent, role: 'assistant', titleUpdate: isFirstMessage });
+        return NextResponse.json({ 
+            id: aiDocRef.id, 
+            content: aiContent, 
+            role: 'assistant', 
+            type: messageType,
+            titleUpdate: isFirstMessage 
+        });
 
     } catch (error) {
         console.error(error);

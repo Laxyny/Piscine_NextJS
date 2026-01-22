@@ -25,12 +25,18 @@ export function useChat(chatId) {
     }
   };
 
-  const sendMessage = async (content, overrideChatId = null) => {
+  const sendMessage = async (content, overrideChatId = null, mode = 'text') => {
     const targetChatId = overrideChatId || chatId;
     if (!content.trim() || !targetChatId) return;
 
     const tempId = Date.now();
-    const userMsg = { id: tempId, content, role: 'user', createdAt: new Date().toISOString() };
+    const userMsg = { 
+        id: tempId, 
+        content, 
+        role: 'user', 
+        type: 'text',
+        createdAt: new Date().toISOString() 
+    };
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
@@ -38,7 +44,7 @@ export function useChat(chatId) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, chatId: targetChatId }),
+        body: JSON.stringify({ content, chatId: targetChatId, mode }),
       });
 
       if (!res.ok) throw new Error('Failed to send message');
