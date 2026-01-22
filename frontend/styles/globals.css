@@ -817,22 +817,5 @@ html, body {
   40% { transform: scale(1); }
 }
 
-/* Agent Styles */
-.agent-badge {
-    font-size: 1.1rem;
-    flex-shrink: 0;
-}
-
-.chat-item.agent-chat {
-    border-left: 3px solid #10a37f;
-    padding-left: 0.6rem;
-}
-
-.chat-item.agent-chat.active {
-    background: rgba(16, 163, 127, 0.1);
-    color: #10a37f;
-}
-
-.chat-item.agent-chat:hover {
-    background: rgba(16, 163, 127, 0.05);
-}
+@import './pdf-button.css';
+@import './agent-styles.css';
