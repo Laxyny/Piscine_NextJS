@@ -29,9 +29,9 @@ Les technologies suivantes doivent être utilisées :
 - **Langage** : JavaScript (pas de TypeScript)
 - **Frontend** : React
 - **Backend** : API Routes Next.js
-- **Base** de données : SQLite
+- **Base** de données : Firebase
 - **Accès** base de données : Prisma
-- **IA** : API Groq
+- **IA** : API Grok
 - **Containerisation** : Docker (un seul Dockerfile)
 
 ## Architecture du projet (obligatoire)
@@ -46,12 +46,12 @@ La structure suivante doit être respectée.
 | ```frontend/styles/```       | Styles                 | Fichiers CSS pour le style de l’application.                            |
 | ```backend/```               | Logique serveur        | Contient toute la logique métier côté serveur.                          |
 | ```backend/services/```      | Services               | Fonctions métier (appel IA, sauvegarde des messages).                   |
-| ```backend/lib/```           | Outils backend         | Connexion à la base de données SQLite.                                  |
-| ```backend/prisma/```        | Base de données        | Schéma Prisma et configuration SQLite.                                  |
+| ```backend/lib/```           | Outils backend         | Connexion à la base de données Firebase.                                  |
+| ```backend/prisma/```        | Base de données        | Schéma Prisma et configuration Firebase.                                  |
 | ```app/```                   | Next.js App Router     | Point d’entrée de l’application Next.js.                                |
 | ```app/api/```               | API Routes             | API accessibles via /api/*.                                             |
 | ```app/page.js```            | Page principale        | Page principale de l’application.                                       |
-| ```data/```                  | Données                | Contient le fichier de base de données SQLite.                          |
+| ```data/```                  | Données                | Contient le fichier de base de données Firebase.                          |
 | ```Dockerfile```             | Déploiement            | Instructions pour construire et lancer l’application avec Docker.       |
 | ```package.json```           | Dépendances            | Liste des dépendances et scripts du projet.                             |
 | ```README.md```              | Documentation          | Explication du projet et instructions de lancement.                     |
@@ -75,7 +75,7 @@ chat-app/
 │   ├── page.js              
 │   └── layout.js           
 │
-├── data/                    # Base de données SQLite
+├── data/                    # Base de données Firebase
 │   └── app.db               
 │
 ├── Dockerfile               
@@ -98,17 +98,17 @@ Lorsqu’un utilisateur envoie un message :
 - le frontend appelle une route API (```/api/chat```)
 - le backend reçoit le message
 - le message est vérifié (non vide)
-- le message est enregistré dans SQLite  
+- le message est enregistré dans Firebase  
 
 ### 3. Réponse de l’IA
 Le backend doit :
-- envoyer le message à l’API Groq
+- envoyer le message à l’API Grok
 - recevoir la réponse
-- enregistrer la réponse dans SQLite
+- enregistrer la réponse dans Firebase
 - renvoyer la réponse au frontend 
 
 ### 4. Base de données
-La base de données SQLite doit contenir au minimum :
+La base de données Firebase doit contenir au minimum :
 - le contenu du message
 - le rôle du message (```user``` ou ```assistant```)
 - la date de création
@@ -149,7 +149,7 @@ Le projet sera évalué selon :
 À la fin du projet, les apprenants doivent être capables de :
 - créer une application Next.js en JavaScript
 - comprendre le rôle des API Routes
-- utiliser une base de données SQLite
+- utiliser une base de données Firebase
 - organiser un projet web correctement
 
 **Ce cahier des charges est volontairement simple et pédagogique.** L’objectif n’est pas la performance, mais la compréhension.
