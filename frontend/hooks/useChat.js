@@ -5,9 +5,8 @@ export function useChat(chatId) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Load messages when chatId changes
   useEffect(() => {
-    if (!chatId) {
+    if (!chatId || chatId === 'draft') {
       setMessages([]);
       return;
     }
@@ -26,10 +25,10 @@ export function useChat(chatId) {
     }
   };
 
-  const sendMessage = async (content) => {
-    if (!content.trim() || !chatId) return;
+  const sendMessage = async (content, overrideChatId = null) => {
+    const targetChatId = overrideChatId || chatId;
+    if (!content.trim() || !targetChatId) return;
 
-    // Optimistic update
     const tempId = Date.now();
     const userMsg = { id: tempId, content, role: 'user', createdAt: new Date().toISOString() };
     setMessages((prev) => [...prev, userMsg]);
@@ -39,16 +38,15 @@ export function useChat(chatId) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, chatId }),
+        body: JSON.stringify({ content, chatId: targetChatId }),
       });
 
       if (!res.ok) throw new Error('Failed to send message');
 
       const aiMsg = await res.json();
       
-      // Update with real data
-      await fetchMessages(chatId);
-      return aiMsg; // Return AI message to trigger sound if needed
+      await fetchMessages(targetChatId);
+      return aiMsg;
 
     } catch (err) {
       console.error(err);
