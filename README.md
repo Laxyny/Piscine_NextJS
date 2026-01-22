@@ -1,7 +1,7 @@
 # Piscine_NextJS# Cahier des charges – Projet Chat Web
 
 ## Objectif pédagogique
-L’objectif de ce projet est de permettre aux apprenants de **créer une application de chat simple**, moderne et fonctionnelle, en utilisant **Next.js**, **JavaScript** et **SQLite**.
+L’objectif de ce projet est de permettre aux apprenants de **créer une application de chat simple**, moderne et fonctionnelle, en utilisant **Next.js**, **JavaScript** et **Firebase**.
 
 Le projet est volontairement simple, afin que les apprenants se concentrent sur :
 - la compréhension du lien frontend / backend
