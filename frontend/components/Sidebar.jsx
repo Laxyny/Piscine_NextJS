@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getApp } from 'firebase/app';
 import Link from 'next/link';
+import AgentsModal from './AgentsModal';
 
-export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat }) {
+export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat, selectedAgentId, onSelectAgent }) {
   const [chats, setChats] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
+  const [showAgentsModal, setShowAgentsModal] = useState(false);
   const db = getFirestore(getApp());
 
   useEffect(() => {
@@ -75,12 +77,27 @@ export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat }
         <button onClick={handleNewChat} className="new-chat-btn">
           + Nouvelle discussion
         </button>
+        <button onClick={() => setShowAgentsModal(true)} className="new-chat-btn" style={{ marginTop: '0.5rem', background: 'transparent', border: '1px dashed #ccc' }}>
+          Mes GPTs
+        </button>
       </div>
+
+      {showAgentsModal && (
+        <AgentsModal
+          user={user}
+          onClose={() => setShowAgentsModal(false)}
+          onSelectAgent={(agent) => {
+            onSelectAgent(agent);
+            setShowAgentsModal(false);
+          }}
+        />
+      )}
+
       <div className="chat-list">
         {chats.map(chat => (
           <div
             key={chat.id}
-            className={`chat-item ${currentChatId === chat.id ? 'active' : ''}`}
+            className={`chat-item ${currentChatId === chat.id ? 'active' : ''} ${chat.agentId ? 'agent-chat' : ''}`}
             onClick={() => onSelectChat(chat.id)}
           >
             {editingId === chat.id ? (
@@ -96,7 +113,10 @@ export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat }
               />
             ) : (
               <div className="chat-item-content">
-                <span className="chat-title">{chat.title || "Discussion sans titre"}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
+                  {chat.agentId && <span className="agent-badge">𝕏</span>}
+                  <span className="chat-title">{chat.title || "Discussion sans titre"}</span>
+                </div>
                 <div className="chat-actions">
                   {currentChatId === chat.id && (
                     <>

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../backend/lib/db';
-import { collection, getDocs, addDoc, orderBy, query, limit, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc, orderBy, query, limit, doc, updateDoc, getDoc } from "firebase/firestore";
 
 async function generateTitle(firstMessage, apiKey) {
     try {
@@ -113,8 +113,25 @@ export async function POST(request) {
             messageType = 'image';
 
         } else {
+            let systemInstruction = 'Tu es un assistant utile et professionnel. Tu utilises le Markdown pour formater tes réponses, surtout pour le code.';
+            
+            try {
+                const chatDoc = await getDoc(doc(db, "chats", chatId));
+                if (chatDoc.exists()) {
+                    const chatData = chatDoc.data();
+                    if (chatData.agentId) {
+                        const agentDoc = await getDoc(doc(db, "agents", chatData.agentId));
+                        if (agentDoc.exists()) {
+                            systemInstruction = agentDoc.data().systemPrompt;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching agent prompt:", e);
+            }
+
             const messagesPayload = [
-                { role: 'system', content: 'Tu es un assistant utile et professionnel. Tu utilises le Markdown pour formater tes réponses, surtout pour le code.' },
+                { role: 'system', content: systemInstruction },
                 ...history,
                 { role: 'user', content: content }
             ];

@@ -12,6 +12,7 @@ export default function Chat() {
   const { user, loading: authLoading, login } = useAuth();
   const { playNotification } = useSettings();
   const [currentChatId, setCurrentChatId] = useState(null);
+  const [selectedAgent, setSelectedAgent] = useState(null);
   const { messages, loading: chatLoading, sendMessage } = useChat(currentChatId);
 
   const [input, setInput] = useState('');
@@ -46,11 +47,19 @@ export default function Chat() {
 
     if (currentChatId === 'draft') {
       try {
-        const docRef = await addDoc(collection(db, "chats"), {
+        const chatData = {
           userId: user.uid,
           createdAt: serverTimestamp(),
           title: "Nouvelle discussion"
-        });
+        };
+        
+        if (selectedAgent) {
+          chatData.agentId = selectedAgent.id;
+          chatData.agentName = selectedAgent.name;
+          chatData.title = selectedAgent.name; // Use agent name as initial title
+        }
+
+        const docRef = await addDoc(collection(db, "chats"), chatData);
         targetChatId = docRef.id;
         setCurrentChatId(targetChatId);
       } catch (error) {
@@ -85,8 +94,10 @@ export default function Chat() {
       <Sidebar
         user={user}
         currentChatId={currentChatId}
-        onSelectChat={setCurrentChatId}
-        onNewChat={setCurrentChatId}
+        onSelectChat={(id) => { setCurrentChatId(id); setSelectedAgent(null); }}
+        onNewChat={(id) => { setCurrentChatId(id); setSelectedAgent(null); }}
+        selectedAgentId={selectedAgent?.id}
+        onSelectAgent={(agent) => { setSelectedAgent(agent); setCurrentChatId('draft'); }}
       />
 
       <main className="chat-container main-content">
