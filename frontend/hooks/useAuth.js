@@ -2,7 +2,8 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { 
   getAuth, 
   signInWithPopup, 
-  GoogleAuthProvider, 
+  GoogleAuthProvider,
+  GithubAuthProvider, 
   signOut, 
   onAuthStateChanged 
 } from 'firebase/auth';
@@ -23,7 +24,8 @@ const firebaseConfig = {
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+const googleProvider = new GoogleAuthProvider();
+const githubProvider = new GithubAuthProvider();
 
 const AuthContext = createContext();
 
@@ -39,11 +41,19 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  const login = async () => {
+  const loginWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithPopup(auth, googleProvider);
     } catch (error) {
-      console.error("Login failed", error);
+      console.error("Google Login failed", error);
+    }
+  };
+
+  const loginWithGithub = async () => {
+    try {
+      await signInWithPopup(auth, githubProvider);
+    } catch (error) {
+      console.error("GitHub Login failed", error);
     }
   };
 
@@ -56,7 +66,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login: loginWithGoogle, loginWithGithub, logout }}>
       {children}
     </AuthContext.Provider>
   );

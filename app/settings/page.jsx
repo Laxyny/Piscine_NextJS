@@ -52,7 +52,7 @@ function SettingsContent() {
                         <p>{user?.email}</p>
                     </div>
                 </div>
-                <button onClick={logout} className="logout-btn">Se déconnecter</button>
+                <button onClick={() => { logout(); router.push('/'); }} className="logout-btn">Se déconnecter</button>
             </section>
 
             <section className="settings-section">
