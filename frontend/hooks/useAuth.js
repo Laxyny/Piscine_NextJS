@@ -5,7 +5,9 @@ import {
   GoogleAuthProvider,
   GithubAuthProvider, 
   signOut, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence
 } from 'firebase/auth';
 import { initializeApp, getApps, getApp } from "firebase/app";
 
@@ -46,6 +48,10 @@ export function AuthProvider({ children }) {
         setLoading(false);
         return;
     }
+
+    setPersistence(auth, browserLocalPersistence)
+        .catch((error) => console.error("Persistence error:", error));
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
