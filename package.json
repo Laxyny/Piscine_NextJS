@@ -6,17 +6,16 @@
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
-        "lint": "next lint",
-        "postinstall": "prisma generate --schema=./backend/prisma/schema.prisma"
+        "lint": "next lint"
     },
     "dependencies": {
-        "@prisma/client": "^6.0.0",
+        "firebase": "^11.2.0",
         "groq-sdk": "^0.9.0",
+        "html2pdf.js": "^0.14.0",
         "next": "15.1.0",
         "react": "^19.0.0",
-        "react-dom": "^19.0.0"
-    },
-    "devDependencies": {
-        "prisma": "^6.0.0"
+        "react-dom": "^19.0.0",
+        "react-markdown": "^10.1.0",
+        "react-syntax-highlighter": "^16.1.0"
     }
 }

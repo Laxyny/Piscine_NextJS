@@ -1,0 +1,22 @@
+name: Sync vers Hugging Face
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push vers Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }} 
+        run: |
+          git push https://user:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE_NAME main

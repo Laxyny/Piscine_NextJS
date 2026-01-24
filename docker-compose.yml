@@ -2,8 +2,15 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - "7860:7860"
     volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
       - ./data:/app/data
+    environment:
+      - WATCHPACK_POLLING=true
+      - NODE_ENV=development
     env_file:
       - .env
+    command: npm run dev

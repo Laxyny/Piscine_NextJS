@@ -1,0 +1,41 @@
+.pdf-action-container {
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.download-pdf-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    background: #ff3b30;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(255, 59, 48, 0.2);
+}
+
+.download-pdf-btn:hover {
+    background: #d63026;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(255, 59, 48, 0.3);
+}
+
+.download-pdf-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    .pdf-action-container {
+        border-top-color: rgba(255,255,255,0.1);
+    }
+}
