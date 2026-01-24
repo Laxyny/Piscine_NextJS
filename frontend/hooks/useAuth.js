@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { 
   getAuth, 
   signInWithPopup, 
+  signInWithRedirect,
   GoogleAuthProvider,
   GithubAuthProvider, 
   signOut, 
@@ -68,7 +69,15 @@ export function AuthProvider({ children }) {
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error("Google Login failed", error);
-      alert("Erreur connexion Google: " + error.message);
+      if (error.code === 'auth/popup-blocked') {
+          try {
+              await signInWithRedirect(auth, googleProvider);
+          } catch (e) {
+              alert("Erreur connexion Google (Redirect): " + e.message);
+          }
+      } else {
+          alert("Erreur connexion Google: " + error.message);
+      }
     }
   };
 
@@ -81,7 +90,15 @@ export function AuthProvider({ children }) {
       await signInWithPopup(auth, githubProvider);
     } catch (error) {
       console.error("GitHub Login failed", error);
-      alert("Erreur connexion GitHub: " + error.message);
+      if (error.code === 'auth/popup-blocked') {
+          try {
+              await signInWithRedirect(auth, githubProvider);
+          } catch (e) {
+              alert("Erreur connexion GitHub (Redirect): " + e.message);
+          }
+      } else {
+          alert("Erreur connexion GitHub: " + error.message);
+      }
     }
   };
 
