@@ -60,20 +60,28 @@ export function AuthProvider({ children }) {
   }, []);
 
   const loginWithGoogle = async () => {
-    if (!auth) return;
+    if (!auth) {
+        alert("Erreur configuration: Firebase non initialisé");
+        return;
+    }
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error("Google Login failed", error);
+      alert("Erreur connexion Google: " + error.message);
     }
   };
 
   const loginWithGithub = async () => {
-    if (!auth) return;
+    if (!auth) {
+        alert("Erreur configuration: Firebase non initialisé");
+        return;
+    }
     try {
       await signInWithPopup(auth, githubProvider);
     } catch (error) {
       console.error("GitHub Login failed", error);
+      alert("Erreur connexion GitHub: " + error.message);
     }
   };
 
