@@ -12,6 +12,11 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (!auth || !auth.onAuthStateChanged) {
+            setLoading(false);
+            return;
+        }
+
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             setUser(user);
             setLoading(false);
@@ -20,6 +25,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const googleSignIn = async () => {
+        if (!auth) return;
         const provider = new GoogleAuthProvider();
         try {
             await signInWithPopup(auth, provider);
@@ -29,6 +35,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logOut = async () => {
+        if (!auth) return;
         try {
             await signOut(auth);
         } catch (error) {

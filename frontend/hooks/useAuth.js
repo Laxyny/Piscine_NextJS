@@ -9,10 +9,6 @@ import {
 } from 'firebase/auth';
 import { initializeApp, getApps, getApp } from "firebase/app";
 
-// Re-use config logic from backend/lib/db.js or import it if compatible
-// Since db.js exports 'db', we might need to export 'app' or re-init here.
-// For simplicity in the hook, let's assume we can get the app instance.
-
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -22,8 +18,20 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
+let app;
+let auth;
+
+try {
+  if (typeof window !== 'undefined' || firebaseConfig.apiKey) {
+      app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+      auth = getAuth(app);
+  } else {
+      console.warn("Skipping Firebase auth init (server/build with missing keys)");
+  }
+} catch (e) {
+    console.error("Auth init error:", e);
+}
+
 const googleProvider = new GoogleAuthProvider();
 const githubProvider = new GithubAuthProvider();
 
@@ -34,6 +42,10 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+        setLoading(false);
+        return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
@@ -42,6 +54,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const loginWithGoogle = async () => {
+    if (!auth) return;
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
@@ -50,6 +63,7 @@ export function AuthProvider({ children }) {
   };
 
   const loginWithGithub = async () => {
+    if (!auth) return;
     try {
       await signInWithPopup(auth, githubProvider);
     } catch (error) {
@@ -58,6 +72,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
     } catch (error) {
