@@ -5,8 +5,8 @@ import { useAuth } from '../hooks/useAuth';
 import { useSettings } from '../context/SettingsContext';
 import Sidebar from './Sidebar';
 import MessageBubble from './MessageBubble';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getApp } from 'firebase/app';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../backend/lib/db';
 
 export default function Chat() {
   const { user, loading: authLoading, login, loginWithGithub } = useAuth();
@@ -19,7 +19,6 @@ export default function Chat() {
   const [isImageMode, setIsImageMode] = useState(false);
   const messagesEndRef = useRef(null);
   const prevMessagesLength = useRef(0);
-  const db = getFirestore(getApp());
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
