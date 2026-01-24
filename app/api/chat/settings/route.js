@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../backend/lib/db';
 import { collection, getDocs, addDoc, orderBy, query, limit, updateDoc, doc, deleteDoc, writeBatch } from "firebase/firestore";
 
+export const dynamic = 'force-dynamic';
+
 // DELETE /api/chat/settings - Clear all chats for a user (passed via query param for simplicity in this MVP)
 // ideally authenticated user from headers
 export async function DELETE(request) {

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../backend/lib/db';
 import { collection, getDocs, addDoc, query, where, orderBy, serverTimestamp } from "firebase/firestore";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);

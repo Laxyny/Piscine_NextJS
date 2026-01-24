@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../backend/lib/db';
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 
+export const dynamic = 'force-dynamic';
+
 export async function DELETE(request, { params }) {
     try {
         const { id } = params;

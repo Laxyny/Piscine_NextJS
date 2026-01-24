@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../backend/lib/db';
 import { collection, getDocs, addDoc, orderBy, query, limit, doc, updateDoc, getDoc } from "firebase/firestore";
 
+export const dynamic = 'force-dynamic';
+
 async function generateTitle(firstMessage, apiKey) {
     try {
         const res = await fetch('https://api.x.ai/v1/chat/completions', {
