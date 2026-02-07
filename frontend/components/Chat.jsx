@@ -17,8 +17,13 @@ export default function Chat() {
 
   const [input, setInput] = useState('');
   const [isImageMode, setIsImageMode] = useState(false);
+  const [isInIframe, setIsInIframe] = useState(false);
   const messagesEndRef = useRef(null);
   const prevMessagesLength = useRef(0);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') setIsInIframe(window.self !== window.top);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -75,12 +80,6 @@ export default function Chat() {
   };
 
   if (authLoading) return <div className="loading">Chargement...</div>;
-
-  const [isInIframe, setIsInIframe] = useState(false);
-
-  useEffect(() => {
-    setIsInIframe(window.self !== window.top);
-  }, []);
 
   if (!user) {
     if (isInIframe) {
