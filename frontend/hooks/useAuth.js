@@ -7,7 +7,10 @@ import {
   signOut, 
   onAuthStateChanged,
   setPersistence,
-  browserLocalPersistence
+  browserLocalPersistence,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile
 } from 'firebase/auth';
 import { initializeApp, getApps, getApp } from "firebase/app";
 
@@ -85,6 +88,32 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const signUpWithEmail = async (email, password) => {
+    if (!auth) {
+      alert("Erreur configuration: Firebase non initialisé");
+      return;
+    }
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error("Sign up failed", error);
+      throw error;
+    }
+  };
+
+  const signInWithEmail = async (email, password) => {
+    if (!auth) {
+      alert("Erreur configuration: Firebase non initialisé");
+      return;
+    }
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error("Sign in failed", error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     if (!auth) return;
     try {
@@ -94,8 +123,19 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const updateDisplayName = async (displayName) => {
+    if (!auth?.currentUser) return;
+    try {
+      await updateProfile(auth.currentUser, { displayName: displayName.trim() || null });
+      setUser({ ...auth.currentUser, displayName: displayName.trim() || null });
+    } catch (error) {
+      console.error("Update display name failed", error);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login: loginWithGoogle, loginWithGithub, logout }}>
+    <AuthContext.Provider value={{ user, loading, login: loginWithGoogle, loginWithGithub, logout, signUpWithEmail, signInWithEmail, updateDisplayName }}>
       {children}
     </AuthContext.Provider>
   );

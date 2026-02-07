@@ -4,6 +4,7 @@ import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, se
 import { getApp } from 'firebase/app';
 import Link from 'next/link';
 import AgentsModal from './AgentsModal';
+import { getDisplayName, getInitials } from '../utils/displayName';
 
 export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat, selectedAgentId, onSelectAgent }) {
   const [chats, setChats] = useState([]);
@@ -154,8 +155,12 @@ export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat, 
           <span>Paramètres</span>
         </Link>
         <div className="user-profile">
-          <img src={user?.photoURL} alt={user?.displayName} className="user-avatar" />
-          <span className="user-name">{user?.displayName}</span>
+          {user?.photoURL ? (
+            <img src={user.photoURL} alt={getDisplayName(user)} className="user-avatar" />
+          ) : (
+            <span className="user-avatar user-avatar-initials">{getInitials(getDisplayName(user))}</span>
+          )}
+          <span className="user-name">{getDisplayName(user)}</span>
         </div>
       </div>
     </aside>
