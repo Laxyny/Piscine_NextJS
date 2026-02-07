@@ -76,7 +76,29 @@ export default function Chat() {
 
   if (authLoading) return <div className="loading">Chargement...</div>;
 
+  const [isInIframe, setIsInIframe] = useState(false);
+
+  useEffect(() => {
+    setIsInIframe(window.self !== window.top);
+  }, []);
+
   if (!user) {
+    if (isInIframe) {
+      return (
+        <div className="login-container">
+          <h1>Bienvenue sur ChatApp</h1>
+          <p>Pour des raisons de sécurité, la connexion nécessite d'ouvrir l'application en plein écran.</p>
+          <button 
+            onClick={() => window.open(window.location.href, '_blank')} 
+            className="login-btn"
+            style={{ justifyContent: 'center', background: 'var(--primary-color)', color: 'white', border: 'none' }}
+          >
+            Ouvrir dans un nouvel onglet ↗
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="login-container">
         <h1>Bienvenue sur ChatApp</h1>
