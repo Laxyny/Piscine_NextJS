@@ -55,7 +55,7 @@ function SettingsContent() {
                 <button onClick={() => { logout(); router.push('/'); }} className="logout-btn">Se déconnecter</button>
             </section>
 
-            <section className="settings-section">
+            {/* <section className="settings-section">
                 <h2>Notifications sonores</h2>
                 <div className="setting-row">
                     <label>Activer le son</label>
@@ -83,7 +83,7 @@ function SettingsContent() {
                         <button onClick={playNotification} className="test-sound-btn">Test</button>
                     </div>
                 )}
-            </section>
+            </section> */}
 
             <section className="settings-section danger-zone">
                 <h2>Zone de danger</h2>
