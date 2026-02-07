@@ -468,6 +468,11 @@ html, body {
     padding-bottom: 1rem;
 }
 
+.career-form .form-group { margin-bottom: 1rem; }
+.career-error { color: var(--error-color, #dc3545); margin: 0.5rem 0; font-size: 0.9rem; }
+.career-result .career-block { margin-top: 1rem; }
+.career-block.markdown-content { padding: 1rem; background: var(--input-bg); border-radius: 10px; border: 1px solid var(--border-color); }
+
 .profile-info {
     display: flex;
     align-items: center;
