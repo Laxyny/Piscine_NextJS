@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../backend/lib/db';
 import { collection, addDoc } from 'firebase/firestore';
+import { getAuthFromRequest, unauthorizedResponse } from '../../../backend/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,10 +18,12 @@ function parseStructuredResponse(text) {
 
 export async function POST(request) {
   try {
-    const body = await request.json();
-    const { userId, nom, formation, experiences, competences, poste } = body;
+    const authUser = await getAuthFromRequest(request);
+    if (!authUser) return unauthorizedResponse();
+    const userId = authUser.uid;
 
-    if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    const body = await request.json();
+    const { nom, formation, experiences, competences, poste } = body;
 
     const hasContent = [formation, experiences, competences, poste].some(
       (v) => v && String(v).trim().length > 0

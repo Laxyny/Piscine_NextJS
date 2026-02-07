@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from './useAuth';
 
 export function useChat(chatId) {
+  const { getToken } = useAuth();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -13,9 +15,16 @@ export function useChat(chatId) {
     fetchMessages(chatId);
   }, [chatId]);
 
+  const authHeaders = async () => {
+    const token = await getToken();
+    const h = { 'Content-Type': 'application/json' };
+    if (token) h.Authorization = `Bearer ${token}`;
+    return h;
+  };
+
   const fetchMessages = async (id) => {
     try {
-      const res = await fetch(`/api/chat?chatId=${id}`);
+      const res = await fetch(`/api/chat?chatId=${id}`, { headers: await authHeaders() });
       if (!res.ok) throw new Error('Failed to fetch messages');
       const data = await res.json();
       setMessages(data);
@@ -43,7 +52,7 @@ export function useChat(chatId) {
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({ content, chatId: targetChatId, mode }),
       });
 

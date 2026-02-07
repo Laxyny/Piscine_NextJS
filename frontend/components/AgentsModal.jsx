@@ -1,12 +1,21 @@
 "use client";
 import { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
 
 export default function AgentsModal({ user, onClose, onSelectAgent }) {
+  const { getToken } = useAuth();
   const [agents, setAgents] = useState([]);
-  const [view, setView] = useState('list'); // 'list' or 'edit'
+  const [view, setView] = useState('list');
   const [editingAgent, setEditingAgent] = useState(null);
   const [formData, setFormData] = useState({ name: '', description: '', systemPrompt: '' });
   const [loading, setLoading] = useState(false);
+
+  const authHeaders = async () => {
+    const token = await getToken();
+    const h = { 'Content-Type': 'application/json' };
+    if (token) h.Authorization = `Bearer ${token}`;
+    return h;
+  };
 
   useEffect(() => {
     fetchAgents();
@@ -15,9 +24,9 @@ export default function AgentsModal({ user, onClose, onSelectAgent }) {
   const fetchAgents = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`/api/agents?userId=${user.uid}`);
+      const res = await fetch('/api/agents', { headers: await authHeaders() });
       const data = await res.json();
-      setAgents(data);
+      setAgents(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
     }
@@ -29,11 +38,10 @@ export default function AgentsModal({ user, onClose, onSelectAgent }) {
     try {
       const url = editingAgent ? `/api/agents/${editingAgent.id}` : '/api/agents';
       const method = editingAgent ? 'PATCH' : 'POST';
-      
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, userId: user.uid })
+        headers: await authHeaders(),
+        body: JSON.stringify(editingAgent ? { ...formData } : formData)
       });
 
       if (res.ok) {
@@ -52,9 +60,8 @@ export default function AgentsModal({ user, onClose, onSelectAgent }) {
   const handleDelete = async (e, id) => {
     e.stopPropagation();
     if (!confirm('Supprimer cet assistant ?')) return;
-    
     try {
-      await fetch(`/api/agents/${id}`, { method: 'DELETE' });
+      await fetch(`/api/agents/${id}`, { method: 'DELETE', headers: await authHeaders() });
       fetchAgents();
     } catch (e) {
       console.error(e);

@@ -8,7 +8,7 @@ import { SettingsProvider } from '../../frontend/context/SettingsContext';
 import ReactMarkdown from 'react-markdown';
 
 function CareerContent() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, getToken } = useAuth();
   const router = useRouter();
   const [form, setForm] = useState({
     nom: '',
@@ -40,10 +40,13 @@ function CareerContent() {
     }
     setLoading(true);
     try {
+      const token = await getToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch('/api/career', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.uid, ...form })
+        headers,
+        body: JSON.stringify(form)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erreur');

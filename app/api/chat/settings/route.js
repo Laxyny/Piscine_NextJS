@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../backend/lib/db';
-import { collection, getDocs, addDoc, orderBy, query, limit, updateDoc, doc, deleteDoc, writeBatch } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, writeBatch } from "firebase/firestore";
+import { getAuthFromRequest, unauthorizedResponse } from '../../../../backend/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-// DELETE /api/chat/settings - Clear all chats for a user (passed via query param for simplicity in this MVP)
-// ideally authenticated user from headers
 export async function DELETE(request) {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) return NextResponse.json({error: 'User ID required'}, {status: 400});
+    const authUser = await getAuthFromRequest(request);
+    if (!authUser) return unauthorizedResponse();
+    const userId = authUser.uid;
 
     try {
         const chatsRef = collection(db, "chats");

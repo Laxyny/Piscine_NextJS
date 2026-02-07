@@ -9,7 +9,7 @@ import { SettingsProvider } from '../../frontend/context/SettingsContext';
 import { getDisplayName, getInitials } from '../../frontend/utils/displayName';
 
 function SettingsContent() {
-    const { user, logout, updateDisplayName } = useAuth();
+    const { user, logout, updateDisplayName, getToken } = useAuth();
     const { soundSettings, updateSoundSettings, playNotification } = useSettings();
     const [deleting, setDeleting] = useState(false);
     const [displayNameEdit, setDisplayNameEdit] = useState('');
@@ -44,7 +44,9 @@ function SettingsContent() {
         
         setDeleting(true);
         try {
-            await fetch(`/api/chat/settings?userId=${user.uid}`, { method: 'DELETE' });
+            const token = await getToken();
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            await fetch('/api/chat/settings', { method: 'DELETE', headers });
             alert('Historique supprimé.');
             router.push('/');
         } catch (e) {

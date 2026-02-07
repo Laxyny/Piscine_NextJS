@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../backend/lib/db';
 import { collection, getDocs, addDoc, query, where, orderBy, serverTimestamp } from "firebase/firestore";
+import { getAuthFromRequest, unauthorizedResponse } from '../../../backend/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
     try {
-        const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId');
-
-        if (!userId) return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+        const authUser = await getAuthFromRequest(request);
+        if (!authUser) return unauthorizedResponse();
+        const userId = authUser.uid;
 
         const q = query(
             collection(db, "agents"),
@@ -32,10 +32,14 @@ export async function GET(request) {
 
 export async function POST(request) {
     try {
-        const body = await request.json();
-        const { name, description, systemPrompt, userId } = body;
+        const authUser = await getAuthFromRequest(request);
+        if (!authUser) return unauthorizedResponse();
+        const userId = authUser.uid;
 
-        if (!name || !systemPrompt || !userId) {
+        const body = await request.json();
+        const { name, description, systemPrompt } = body;
+
+        if (!name || !systemPrompt) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 

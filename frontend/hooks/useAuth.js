@@ -134,8 +134,17 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const getToken = async () => {
+    if (!auth?.currentUser) return null;
+    try {
+      return await auth.currentUser.getIdToken();
+    } catch {
+      return null;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login: loginWithGoogle, loginWithGithub, logout, signUpWithEmail, signInWithEmail, updateDisplayName }}>
+    <AuthContext.Provider value={{ user, loading, login: loginWithGoogle, loginWithGithub, logout, signUpWithEmail, signInWithEmail, updateDisplayName, getToken }}>
       {children}
     </AuthContext.Provider>
   );

@@ -155,6 +155,9 @@ Le projet sera évalué selon :
 - la lisibilité du code JavaScript
 - la qualité du README
 
+## Vérification du token (routes API)
+Les routes API protègent l’accès en vérifiant le token Firebase. Le client envoie l’en-tête `Authorization: Bearer <idToken>`. Côté serveur, le SDK **firebase-admin** vérifie le token. Il faut définir la variable d’environnement **`FIREBASE_SERVICE_ACCOUNT_KEY`** avec le JSON complet du compte de service Firebase (Console Firebase → Paramètres du projet → Comptes de service → Générer une nouvelle clé privée).
+
 ## Objectif final
 À la fin du projet, les apprenants doivent être capables de :
 - créer une application Next.js en JavaScript

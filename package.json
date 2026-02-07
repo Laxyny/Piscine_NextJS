@@ -10,6 +10,7 @@
     },
     "dependencies": {
         "firebase": "^11.2.0",
+        "firebase-admin": "^13.6.1",
         "groq-sdk": "^0.9.0",
         "html2pdf.js": "^0.14.0",
         "next": "15.1.0",

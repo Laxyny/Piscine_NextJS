@@ -1,12 +1,14 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { getApp } from 'firebase/app';
 import Link from 'next/link';
 import AgentsModal from './AgentsModal';
 import { getDisplayName, getInitials } from '../utils/displayName';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat, selectedAgentId, onSelectAgent }) {
+  const { getToken } = useAuth();
   const [chats, setChats] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
@@ -46,10 +48,18 @@ export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat, 
     setEditTitle(chat.title);
   };
 
+  const authHeaders = async () => {
+    const token = await getToken();
+    const h = { 'Content-Type': 'application/json' };
+    if (token) h.Authorization = `Bearer ${token}`;
+    return h;
+  };
+
   const saveTitle = async (id) => {
     try {
       await fetch(`/api/chat/${id}`, {
         method: 'PATCH',
+        headers: await authHeaders(),
         body: JSON.stringify({ title: editTitle })
       });
       setEditingId(null);
@@ -63,9 +73,7 @@ export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat, 
     if (!confirm('Voulez-vous vraiment supprimer cette conversation ?')) return;
 
     try {
-      await fetch(`/api/chat/${id}`, {
-        method: 'DELETE'
-      });
+      await fetch(`/api/chat/${id}`, { method: 'DELETE', headers: await authHeaders() });
       if (currentChatId === id) onSelectChat(null);
     } catch (e) {
       console.error(e);
