@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
-import { getAdminAuth } from './firebaseAdmin';
+import { createClient } from '@supabase/supabase-js';
+
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export async function getAuthFromRequest(request) {
-  const auth = getAdminAuth();
-  if (!auth) return null;
+  if (!url || !anonKey) return null;
   const header = request.headers.get('Authorization');
   if (!header || !header.startsWith('Bearer ')) return null;
   const token = header.slice(7).trim();
   if (!token) return null;
   try {
-    const decoded = await auth.verifyIdToken(token);
-    return { uid: decoded.uid, email: decoded.email || null };
+    const supabase = createClient(url, anonKey);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return null;
+    return { uid: user.id, email: user.email || null };
   } catch {
     return null;
   }

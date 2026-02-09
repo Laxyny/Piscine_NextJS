@@ -2,17 +2,14 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
-function getAuthErrorMessage(code) {
-  const messages = {
-    'auth/email-already-in-use': 'Cet email est déjà utilisé.',
-    'auth/invalid-email': 'Adresse email invalide.',
-    'auth/weak-password': 'Le mot de passe doit contenir au moins 6 caractères.',
-    'auth/user-not-found': 'Aucun compte avec cet email.',
-    'auth/wrong-password': 'Mot de passe incorrect.',
-    'auth/invalid-credential': 'Email ou mot de passe incorrect.',
-    'auth/too-many-requests': 'Trop de tentatives. Réessayez plus tard.'
-  };
-  return messages[code] || 'Une erreur est survenue.';
+function getAuthErrorMessage(err) {
+  const msg = err?.message || '';
+  if (msg.includes('already registered') || msg.includes('already in use')) return 'Cet email est déjà utilisé.';
+  if (msg.includes('Invalid login')) return 'Email ou mot de passe incorrect.';
+  if (msg.includes('Email not confirmed')) return 'Veuillez confirmer votre email.';
+  if (msg.includes('Password')) return 'Le mot de passe doit contenir au moins 6 caractères.';
+  if (msg.includes('rate limit') || msg.includes('too many')) return 'Trop de tentatives. Réessayez plus tard.';
+  return msg || 'Une erreur est survenue.';
 }
 
 export default function Login() {
@@ -42,7 +39,7 @@ export default function Login() {
         await signInWithEmail(email.trim(), password);
       }
     } catch (err) {
-      setError(getAuthErrorMessage(err.code) || err.message);
+      setError(getAuthErrorMessage(err) || err.message);
     } finally {
       setLoading(false);
     }

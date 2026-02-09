@@ -1,44 +1,27 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { 
-  getAuth, 
-  signInWithPopup, 
-  GoogleAuthProvider,
-  GithubAuthProvider, 
-  signOut, 
-  onAuthStateChanged,
-  setPersistence,
-  browserLocalPersistence,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  updateProfile
-} from 'firebase/auth';
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { createClient } from '@supabase/supabase-js';
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
-};
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-let app;
-let auth;
-
-try {
-  if (typeof window !== 'undefined' || firebaseConfig.apiKey) {
-      app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-      auth = getAuth(app);
-  } else {
-      console.warn("Skipping Firebase auth init (server/build with missing keys)");
-  }
-} catch (e) {
-    console.error("Auth init error:", e);
+let supabase = null;
+if (typeof window !== 'undefined' && supabaseUrl && supabaseAnonKey) {
+  supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { flowType: 'pkce' }
+  });
 }
 
-const googleProvider = new GoogleAuthProvider();
-const githubProvider = new GithubAuthProvider();
+function mapSessionUser(session) {
+  if (!session?.user) return null;
+  const u = session.user;
+  return {
+    id: u.id,
+    uid: u.id,
+    email: u.email,
+    displayName: u.user_metadata?.full_name || u.user_metadata?.name || null,
+    photoURL: u.user_metadata?.avatar_url || u.user_metadata?.picture || null
+  };
+}
 
 const AuthContext = createContext();
 
@@ -47,104 +30,140 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!auth) {
-        setLoading(false);
-        return;
+    if (!supabase) {
+      setLoading(false);
+      return;
     }
 
-    setPersistence(auth, browserLocalPersistence)
-        .catch((error) => console.error("Persistence error:", error));
+    const setUserFromSession = (session) => {
+      setUser(session ? mapSessionUser(session) : null);
+    };
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserFromSession(session);
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserFromSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  const getRedirectUrl = () => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/auth/callback`;
+  };
+
   const loginWithGoogle = async () => {
-    if (!auth) {
-        alert("Erreur configuration: Firebase non initialisé");
-        return;
+    if (!supabase) {
+      alert('Erreur configuration: Supabase non initialisé');
+      return;
     }
     try {
-      await signInWithPopup(auth, googleProvider);
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: getRedirectUrl() }
+      });
     } catch (error) {
-      console.error("Google Login failed", error);
-      alert("Erreur connexion Google: " + error.message);
+      console.error('Google Login failed', error);
+      alert('Erreur connexion Google: ' + (error.message || ''));
     }
   };
 
   const loginWithGithub = async () => {
-    if (!auth) {
-        alert("Erreur configuration: Firebase non initialisé");
-        return;
+    if (!supabase) {
+      alert('Erreur configuration: Supabase non initialisé');
+      return;
     }
     try {
-      await signInWithPopup(auth, githubProvider);
+      await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: { redirectTo: getRedirectUrl() }
+      });
     } catch (error) {
-      console.error("GitHub Login failed", error);
-      alert("Erreur connexion GitHub: " + error.message);
+      console.error('GitHub Login failed', error);
+      alert('Erreur connexion GitHub: ' + (error.message || ''));
     }
   };
 
   const signUpWithEmail = async (email, password) => {
-    if (!auth) {
-      alert("Erreur configuration: Firebase non initialisé");
+    if (!supabase) {
+      alert('Erreur configuration: Supabase non initialisé');
       return;
     }
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await supabase.auth.signUp({ email, password });
     } catch (error) {
-      console.error("Sign up failed", error);
+      console.error('Sign up failed', error);
       throw error;
     }
   };
 
   const signInWithEmail = async (email, password) => {
-    if (!auth) {
-      alert("Erreur configuration: Firebase non initialisé");
+    if (!supabase) {
+      alert('Erreur configuration: Supabase non initialisé');
       return;
     }
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await supabase.auth.signInWithPassword({ email, password });
     } catch (error) {
-      console.error("Sign in failed", error);
+      console.error('Sign in failed', error);
       throw error;
     }
   };
 
   const logout = async () => {
-    if (!auth) return;
+    if (!supabase) return;
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
     } catch (error) {
-      console.error("Logout failed", error);
+      console.error('Logout failed', error);
     }
   };
 
   const updateDisplayName = async (displayName) => {
-    if (!auth?.currentUser) return;
+    if (!supabase?.auth?.getUser) return;
     try {
-      await updateProfile(auth.currentUser, { displayName: displayName.trim() || null });
-      setUser({ ...auth.currentUser, displayName: displayName.trim() || null });
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (!u) return;
+      await supabase.auth.updateUser({
+        data: { full_name: displayName.trim() || null }
+      });
+      setUser((prev) => (prev ? { ...prev, displayName: displayName.trim() || null } : null));
     } catch (error) {
-      console.error("Update display name failed", error);
+      console.error('Update display name failed', error);
       throw error;
     }
   };
 
   const getToken = async () => {
-    if (!auth?.currentUser) return null;
+    if (!supabase) return null;
     try {
-      return await auth.currentUser.getIdToken();
+      const { data: { session } } = await supabase.auth.getSession();
+      return session?.access_token ?? null;
     } catch {
       return null;
     }
   };
 
+  const login = loginWithGoogle;
+
   return (
-    <AuthContext.Provider value={{ user, loading, login: loginWithGoogle, loginWithGithub, logout, signUpWithEmail, signInWithEmail, updateDisplayName, getToken }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        loginWithGithub,
+        logout,
+        signUpWithEmail,
+        signInWithEmail,
+        updateDisplayName,
+        getToken
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -12,8 +12,8 @@ export async function GET(request) {
     if (!supabase) return NextResponse.json({ error: 'Database not configured' }, { status: 500 });
 
     const { data, error } = await supabase
-      .from('agents')
-      .select('id, name, description, system_prompt, created_at')
+      .from('chats')
+      .select('id, title, agent_id, agent_name, created_at')
       .eq('user_id', authUser.uid)
       .order('created_at', { ascending: false });
 
@@ -22,17 +22,16 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 
-    const agents = (data || []).map((row) => ({
+    const chats = (data || []).map((row) => ({
       id: row.id,
-      name: row.name,
-      description: row.description,
-      systemPrompt: row.system_prompt,
+      title: row.title,
+      agentId: row.agent_id,
+      agentName: row.agent_name,
       createdAt: row.created_at
     }));
 
-    return NextResponse.json(agents);
+    return NextResponse.json(chats);
   } catch (error) {
-    console.error(error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -44,20 +43,16 @@ export async function POST(request) {
     const supabase = getDb();
     if (!supabase) return NextResponse.json({ error: 'Database not configured' }, { status: 500 });
 
-    const body = await request.json();
-    const { name, description, systemPrompt } = body;
-
-    if (!name || !systemPrompt) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
+    const body = await request.json().catch(() => ({}));
+    const { title = 'Nouvelle discussion', agentId, agentName } = body;
 
     const { data, error } = await supabase
-      .from('agents')
+      .from('chats')
       .insert({
         user_id: authUser.uid,
-        name,
-        description: description || '',
-        system_prompt: systemPrompt
+        title: title || 'Nouvelle discussion',
+        agent_id: agentId || null,
+        agent_name: agentName || null
       })
       .select('id')
       .single();
@@ -67,9 +62,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 
-    return NextResponse.json({ id: data.id, name, description: description || '', systemPrompt });
+    return NextResponse.json({ id: data.id });
   } catch (error) {
-    console.error(error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
