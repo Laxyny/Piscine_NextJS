@@ -415,7 +415,7 @@ html, body {
 
 /* Settings Page */
 .settings-container {
-    max-width: 700px;
+    max-width: 800px;
     margin: 0 auto;
     padding: 3rem 2rem;
     height: 100vh;
@@ -430,13 +430,16 @@ html, body {
     margin-bottom: 3rem;
     gap: 1rem;
     position: relative;
-    justify-content: center;
+    flex-wrap: wrap;
+    padding-left: 8rem;
 }
 
 .settings-header h1 {
     margin: 0;
     font-size: 1.8rem;
     font-weight: 700;
+    flex: 1 1 auto;
+    min-width: min-content;
 }
 
 .back-link {
@@ -483,6 +486,31 @@ html, body {
 .career-error { color: var(--error-color, #dc3545); margin: 0.5rem 0; font-size: 0.9rem; }
 .career-result .career-block { margin-top: 1rem; }
 .career-block.markdown-content { padding: 1rem; background: var(--input-bg); border-radius: 10px; border: 1px solid var(--border-color); }
+
+.career-history .career-history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.career-history-item {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s, border-color 0.2s;
+}
+.career-history-item:hover {
+  background: var(--bubble-ai-bg);
+  border-color: var(--primary-color);
+}
 
 .profile-info {
     display: flex;

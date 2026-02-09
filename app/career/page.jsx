@@ -7,6 +7,13 @@ import { AuthProvider } from '../../frontend/hooks/useAuth';
 import { SettingsProvider } from '../../frontend/context/SettingsContext';
 import ReactMarkdown from 'react-markdown';
 
+function formatHistoryLabel(item) {
+  const p = item.profile || {};
+  const poste = p.poste || p.formation || p.nom;
+  const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  return poste ? `${poste} – ${date}` : (date || item.id?.slice(0, 8));
+}
+
 function CareerContent() {
   const { user, loading: authLoading, getToken } = useAuth();
   const router = useRouter();
@@ -20,10 +27,43 @@ function CareerContent() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/');
   }, [authLoading, user]);
+
+  const fetchHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const token = await getToken();
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch('/api/career', { headers });
+      const data = await res.json();
+      if (res.ok) setHistory(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const openHistory = () => {
+    if (!showHistory) fetchHistory();
+    setShowHistory(!showHistory);
+  };
+
+  const selectHistoryItem = (item) => {
+    setResult({
+      id: item.id,
+      cv: item.cv,
+      lettre: item.lettre,
+      suggestions: item.suggestions
+    });
+    setShowHistory(false);
+  };
 
   if (authLoading || !user) return <div className="loading">Chargement...</div>;
 
@@ -69,7 +109,40 @@ function CareerContent() {
           Retour
         </Link>
         <h1>Assistant de carrière</h1>
+        <button
+          type="button"
+          onClick={openHistory}
+          className="save-btn"
+          style={{ marginLeft: 'auto' }}
+        >
+          {showHistory ? 'Masquer l\'historique' : 'Voir l\'historique'}
+        </button>
       </header>
+
+      {showHistory && (
+        <section className="settings-section career-history">
+          <h2>Générations précédentes</h2>
+          {historyLoading ? (
+            <p className="loading">Chargement...</p>
+          ) : history.length === 0 ? (
+            <p>Aucune génération enregistrée.</p>
+          ) : (
+            <ul className="career-history-list">
+              {history.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className="career-history-item"
+                    onClick={() => selectHistoryItem(item)}
+                  >
+                    {formatHistoryLabel(item)}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       <section className="settings-section">
         <h2>Profil professionnel</h2>

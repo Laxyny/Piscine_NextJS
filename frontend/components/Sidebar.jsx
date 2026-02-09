@@ -1,7 +1,5 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { getFirestore, collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { getApp } from 'firebase/app';
 import Link from 'next/link';
 import AgentsModal from './AgentsModal';
 import { getDisplayName, getInitials } from '../utils/displayName';
@@ -13,30 +11,34 @@ export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat, 
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [showAgentsModal, setShowAgentsModal] = useState(false);
-  const db = getFirestore(getApp());
+
+  const authHeaders = async () => {
+    const token = await getToken();
+    const h = { 'Content-Type': 'application/json' };
+    if (token) h.Authorization = `Bearer ${token}`;
+    return h;
+  };
+
+  const fetchChats = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch('/api/chats', { headers: await authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setChats(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     if (!user) {
       setChats([]);
       return;
     }
-
-    const q = query(
-      collection(db, "chats"),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chatList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setChats(chatList);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
+    fetchChats();
+  }, [user, currentChatId]);
 
   const handleNewChat = () => {
     onNewChat('draft');
@@ -48,21 +50,17 @@ export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat, 
     setEditTitle(chat.title);
   };
 
-  const authHeaders = async () => {
-    const token = await getToken();
-    const h = { 'Content-Type': 'application/json' };
-    if (token) h.Authorization = `Bearer ${token}`;
-    return h;
-  };
-
   const saveTitle = async (id) => {
     try {
-      await fetch(`/api/chat/${id}`, {
+      const res = await fetch(`/api/chat/${id}`, {
         method: 'PATCH',
         headers: await authHeaders(),
         body: JSON.stringify({ title: editTitle })
       });
-      setEditingId(null);
+      if (res.ok) {
+        setEditingId(null);
+        fetchChats();
+      }
     } catch (e) {
       console.error(e);
     }
@@ -73,8 +71,11 @@ export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat, 
     if (!confirm('Voulez-vous vraiment supprimer cette conversation ?')) return;
 
     try {
-      await fetch(`/api/chat/${id}`, { method: 'DELETE', headers: await authHeaders() });
-      if (currentChatId === id) onSelectChat(null);
+      const res = await fetch(`/api/chat/${id}`, { method: 'DELETE', headers: await authHeaders() });
+      if (res.ok) {
+        if (currentChatId === id) onSelectChat(null);
+        fetchChats();
+      }
     } catch (e) {
       console.error(e);
     }
@@ -103,7 +104,7 @@ export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat, 
       )}
 
       <div className="chat-list">
-        {chats.map(chat => (
+        {chats.map((chat) => (
           <div
             key={chat.id}
             className={`chat-item ${currentChatId === chat.id ? 'active' : ''} ${chat.agentId ? 'agent-chat' : ''}`}
@@ -124,7 +125,7 @@ export default function Sidebar({ user, currentChatId, onSelectChat, onNewChat, 
               <div className="chat-item-content">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
                   {chat.agentId && <span className="agent-badge">𝕏</span>}
-                  <span className="chat-title">{chat.title || "Discussion sans titre"}</span>
+                  <span className="chat-title">{chat.title || 'Discussion sans titre'}</span>
                 </div>
                 <div className="chat-actions">
                   {currentChatId === chat.id && (

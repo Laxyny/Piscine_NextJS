@@ -1,9 +1,42 @@
 import { NextResponse } from 'next/server';
-import { db } from '../../../backend/lib/db';
-import { collection, addDoc } from 'firebase/firestore';
+import { getDb } from '../../../backend/lib/db';
 import { getAuthFromRequest, unauthorizedResponse } from '../../../backend/lib/auth';
 
 export const dynamic = 'force-dynamic';
+
+export async function GET(request) {
+  try {
+    const authUser = await getAuthFromRequest(request);
+    if (!authUser) return unauthorizedResponse();
+    const supabase = getDb();
+    if (!supabase) return NextResponse.json({ error: 'Database not configured' }, { status: 500 });
+
+    const { data, error } = await supabase
+      .from('career_generations')
+      .select('id, profile, cv, lettre, suggestions, created_at')
+      .eq('user_id', authUser.uid)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error(error);
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    }
+
+    const list = (data || []).map((row) => ({
+      id: row.id,
+      profile: row.profile,
+      cv: row.cv,
+      lettre: row.lettre,
+      suggestions: row.suggestions,
+      createdAt: row.created_at
+    }));
+
+    return NextResponse.json(list);
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+  }
+}
 
 function parseStructuredResponse(text) {
   const cvMatch = text.match(/##\s*CV\s*([\s\S]*?)(?=##\s*Lettre|$)/i);
@@ -21,6 +54,8 @@ export async function POST(request) {
     const authUser = await getAuthFromRequest(request);
     if (!authUser) return unauthorizedResponse();
     const userId = authUser.uid;
+    const supabase = getDb();
+    if (!supabase) return NextResponse.json({ error: 'Database not configured' }, { status: 500 });
 
     const body = await request.json();
     const { nom, formation, experiences, competences, poste } = body;
@@ -43,7 +78,9 @@ export async function POST(request) {
       experiences && `Expériences professionnelles: ${experiences}`,
       competences && `Compétences: ${competences}`,
       poste && `Poste ou domaine visé: ${poste}`
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     const systemPrompt = `Tu es un expert en recrutement et en rédaction de CV et lettres de motivation.
 Tu dois répondre UNIQUEMENT avec le format suivant, sans rien avant ni après:
@@ -83,17 +120,33 @@ Utilise des titres de section clairs dans le CV (Profil, Compétences, Expérien
     const rawContent = data.choices?.[0]?.message?.content || '';
     const { cv, lettre, suggestions } = parseStructuredResponse(rawContent);
 
-    const docRef = await addDoc(collection(db, 'careerGenerations'), {
-      userId,
-      profile: { nom: nom || '', formation: formation || '', experiences: experiences || '', competences: competences || '', poste: poste || '' },
-      cv,
-      lettre,
-      suggestions,
-      createdAt: new Date().toISOString()
-    });
+    const profile = {
+      nom: nom || '',
+      formation: formation || '',
+      experiences: experiences || '',
+      competences: competences || '',
+      poste: poste || ''
+    };
+
+    const { data: row, error } = await supabase
+      .from('career_generations')
+      .insert({
+        user_id: userId,
+        profile,
+        cv,
+        lettre,
+        suggestions
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error(error);
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    }
 
     return NextResponse.json({
-      id: docRef.id,
+      id: row.id,
       cv,
       lettre,
       suggestions

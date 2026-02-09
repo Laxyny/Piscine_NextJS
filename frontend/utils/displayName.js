@@ -13,6 +13,8 @@ export function displayNameFromEmail(email) {
 
 export function getDisplayName(user) {
   if (!user) return 'Utilisateur';
+  const fromMeta = user.user_metadata?.full_name || user.user_metadata?.name;
+  if (fromMeta && String(fromMeta).trim()) return String(fromMeta).trim();
   if (user.displayName && user.displayName.trim()) return user.displayName.trim();
   if (user.email) return displayNameFromEmail(user.email);
   return 'Utilisateur';

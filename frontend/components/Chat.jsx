@@ -6,11 +6,9 @@ import { useSettings } from '../context/SettingsContext';
 import Sidebar from './Sidebar';
 import MessageBubble from './MessageBubble';
 import Login from './Login';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../backend/lib/db';
 
 export default function Chat() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, getToken } = useAuth();
   const { playNotification } = useSettings();
   const [currentChatId, setCurrentChatId] = useState(null);
   const [selectedAgent, setSelectedAgent] = useState(null);
@@ -27,7 +25,7 @@ export default function Chat() {
   }, []);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -52,23 +50,25 @@ export default function Chat() {
 
     if (currentChatId === 'draft') {
       try {
-        const chatData = {
-          userId: user.uid,
-          createdAt: serverTimestamp(),
-          title: "Nouvelle discussion"
+        const token = await getToken();
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const body = {
+          title: selectedAgent ? selectedAgent.name : 'Nouvelle discussion',
+          agentId: selectedAgent?.id || null,
+          agentName: selectedAgent?.name || null
         };
-        
-        if (selectedAgent) {
-          chatData.agentId = selectedAgent.id;
-          chatData.agentName = selectedAgent.name;
-          chatData.title = selectedAgent.name; // Use agent name as initial title
-        }
-
-        const docRef = await addDoc(collection(db, "chats"), chatData);
-        targetChatId = docRef.id;
+        const res = await fetch('/api/chats', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error('Failed to create chat');
+        const data = await res.json();
+        targetChatId = data.id;
         setCurrentChatId(targetChatId);
       } catch (error) {
-        console.error("Error creating chat:", error);
+        console.error('Error creating chat:', error);
         return;
       }
     }
@@ -88,8 +88,8 @@ export default function Chat() {
         <div className="login-container">
           <h1>Bienvenue sur ChatApp</h1>
           <p>Pour des raisons de sécurité, la connexion nécessite d'ouvrir l'application en plein écran.</p>
-          <button 
-            onClick={() => window.open(window.location.href, '_blank')} 
+          <button
+            onClick={() => window.open(window.location.href, '_blank')}
             className="login-btn"
             style={{ justifyContent: 'center', background: 'var(--primary-color)', color: 'white', border: 'none' }}
           >
@@ -106,10 +106,19 @@ export default function Chat() {
       <Sidebar
         user={user}
         currentChatId={currentChatId}
-        onSelectChat={(id) => { setCurrentChatId(id); setSelectedAgent(null); }}
-        onNewChat={(id) => { setCurrentChatId(id); setSelectedAgent(null); }}
+        onSelectChat={(id) => {
+          setCurrentChatId(id);
+          setSelectedAgent(null);
+        }}
+        onNewChat={(id) => {
+          setCurrentChatId(id);
+          setSelectedAgent(null);
+        }}
         selectedAgentId={selectedAgent?.id}
-        onSelectAgent={(agent) => { setSelectedAgent(agent); setCurrentChatId('draft'); }}
+        onSelectAgent={(agent) => {
+          setSelectedAgent(agent);
+          setCurrentChatId('draft');
+        }}
       />
 
       <main className="chat-container main-content">
@@ -151,7 +160,7 @@ export default function Chat() {
                 type="button"
                 onClick={() => setIsImageMode(!isImageMode)}
                 className={`mode-toggle-btn ${isImageMode ? 'active' : ''}`}
-                title={isImageMode ? "Passer en mode Texte" : "Passer en mode Image"}
+                title={isImageMode ? 'Passer en mode Texte' : 'Passer en mode Image'}
               >
                 {isImageMode ? '🎨' : '📝'}
               </button>
@@ -160,7 +169,7 @@ export default function Chat() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={isImageMode ? "Décrivez l'image à générer..." : "Posez votre question..."}
+                placeholder={isImageMode ? "Décrivez l'image à générer..." : 'Posez votre question...'}
                 disabled={chatLoading}
                 className="chat-input"
               />
