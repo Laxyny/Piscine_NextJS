@@ -52,7 +52,6 @@ html, body {
   overflow: hidden;
 }
 
-/* Sidebar */
 .sidebar {
   width: var(--sidebar-width);
   background-color: var(--bg-color);
@@ -238,7 +237,6 @@ html, body {
   text-overflow: ellipsis;
 }
 
-/* Chat Area */
 .main-content {
   flex: 1;
   display: flex;
@@ -293,7 +291,6 @@ html, body {
     font-size: 1.5rem;
 }
 
-/* Messages & Bubbles */
 .message {
   display: flex;
   flex-direction: column;
@@ -362,7 +359,6 @@ html, body {
 
 .message.user .message-time { color: rgba(255, 255, 255, 0.9); }
 
-/* Markdown & Code Blocks */
 .markdown-content p {
     margin: 0.8rem 0;
 }
@@ -405,7 +401,6 @@ html, body {
     color: white;
 }
 
-/* Override syntax highlighter default margins */
 .code-block-wrapper pre {
     margin: 0 !important;
     padding: 16px !important;
@@ -413,7 +408,6 @@ html, body {
     font-family: 'Fira Code', monospace;
 }
 
-/* Settings Page */
 .settings-container {
     max-width: 800px;
     margin: 0 auto;
@@ -483,6 +477,8 @@ html, body {
 }
 
 .career-form .form-group { margin-bottom: 1rem; }
+.career-form .form-group small { display: block; margin-top: 0.35rem; color: var(--text-secondary); font-size: 0.85rem; }
+.career-file-input { display: block; margin-top: 0.25rem; }
 .career-error { color: var(--error-color, #dc3545); margin: 0.5rem 0; font-size: 0.9rem; }
 .career-result .career-block { margin-top: 1rem; }
 .career-block.markdown-content { padding: 1rem; background: var(--input-bg); border-radius: 10px; border: 1px solid var(--border-color); }
@@ -630,7 +626,6 @@ html, body {
     cursor: not-allowed;
 }
 
-/* Login Page Styles */
 .login-container {
     display: flex;
     flex-direction: column;
@@ -743,7 +738,6 @@ html, body {
     flex-shrink: 0;
 }
 
-/* Chat Input Area */
 .chat-form {
   padding: 1.5rem;
   background: var(--chat-bg);
@@ -865,7 +859,6 @@ html, body {
   40% { transform: scale(1); }
 }
 
-/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1007,7 +1000,6 @@ html, body {
   opacity: 1;
 }
 
-/* Form Styles */
 .form-group {
   margin-bottom: 1.5rem;
 }
@@ -1071,6 +1063,33 @@ html, body {
 .save-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.career-mode-toggle {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.career-mode-toggle .career-mode-btn,
+.career-mode-toggle .save-btn {
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.career-mode-toggle .career-mode-btn {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.career-mode-toggle .career-mode-btn:hover {
+  background: var(--bg-tertiary, rgba(255, 255, 255, 0.08));
+  border-color: var(--border-hover, var(--border));
 }
 
 @import './pdf-button.css';

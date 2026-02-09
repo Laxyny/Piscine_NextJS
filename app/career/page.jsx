@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../frontend/hooks/useAuth';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,19 +17,25 @@ function formatHistoryLabel(item) {
 function CareerContent() {
   const { user, loading: authLoading, getToken } = useAuth();
   const router = useRouter();
+  const [mode, setMode] = useState('cv');
   const [form, setForm] = useState({
     nom: '',
     formation: '',
     experiences: '',
     competences: '',
-    poste: ''
+    poste: '',
+    offreEmploi: ''
   });
+  const [cvFile, setCvFile] = useState(null);
+  const [cvText, setCvText] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const cvBlockRef = useRef(null);
+  const lettreBlockRef = useRef(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/');
@@ -65,38 +71,78 @@ function CareerContent() {
     setShowHistory(false);
   };
 
-  if (authLoading || !user) return <div className="loading">Chargement...</div>;
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setResult(null);
-    const hasContent = [form.formation, form.experiences, form.competences, form.poste].some(
-      (v) => v && String(v).trim().length > 0
-    );
-    if (!hasContent) {
-      setError('Renseignez au moins un champ parmi formation, expériences, compétences ou poste visé.');
-      return;
+    if (mode === 'cv') {
+      if (!cvFile && !cvText.trim()) {
+        setError('Choisissez un fichier CV (PDF) ou collez le texte de votre CV.');
+        return;
+      }
+    } else {
+      const hasForm = [form.nom, form.formation, form.experiences, form.competences, form.poste].some(
+        (v) => v && String(v).trim().length > 0
+      );
+      if (!hasForm) {
+        setError('Renseignez au moins un champ (nom, formation, expériences, compétences ou poste).');
+        return;
+      }
     }
     setLoading(true);
     try {
       const token = await getToken();
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch('/api/career', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(form)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erreur');
-      setResult(data);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      if (mode === 'cv') {
+        const fd = new FormData();
+        fd.set('mode', 'cv');
+        fd.set('offreEmploi', form.offreEmploi || '');
+        if (cvFile) {
+          fd.set('cvFile', cvFile);
+        }
+        if (cvText.trim()) {
+          fd.set('cvText', cvText.trim());
+        }
+        const res = await fetch('/api/career', { method: 'POST', headers, body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        setResult(data);
+      } else {
+        headers['Content-Type'] = 'application/json';
+        const res = await fetch('/api/career', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ mode: 'form', ...form })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        setResult(data);
+      }
     } catch (e) {
       setError(e.message || 'Erreur lors de la génération.');
     } finally {
       setLoading(false);
     }
   };
+
+  const downloadPdf = async (ref, filename) => {
+    if (!ref?.current) return;
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      await html2pdf().set({
+        margin: 10,
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(ref.current).save();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  if (authLoading || !user) return <div className="loading">Chargement...</div>;
 
   return (
     <div className="settings-container">
@@ -145,53 +191,115 @@ function CareerContent() {
       )}
 
       <section className="settings-section">
-        <h2>Profil professionnel</h2>
+        <h2>Comment souhaitez-vous procéder ?</h2>
+        <div className="career-mode-toggle">
+          <button
+            type="button"
+            className={mode === 'cv' ? 'save-btn' : 'career-mode-btn'}
+            onClick={() => { setMode('cv'); setError(''); setResult(null); }}
+          >
+            J'envoie mon CV (PDF)
+          </button>
+          <button
+            type="button"
+            className={mode === 'form' ? 'save-btn' : 'career-mode-btn'}
+            onClick={() => { setMode('form'); setError(''); setResult(null); setCvFile(null); setCvText(''); }}
+          >
+            Je remplis le formulaire
+          </button>
+        </div>
         <form onSubmit={handleSubmit} className="career-form">
-          <div className="form-group">
-            <label>Nom (optionnel)</label>
-            <input
-              type="text"
-              value={form.nom}
-              onChange={(e) => setForm({ ...form, nom: e.target.value })}
-              placeholder="Prénom Nom"
-            />
-          </div>
-          <div className="form-group">
-            <label>Formation</label>
-            <input
-              type="text"
-              value={form.formation}
-              onChange={(e) => setForm({ ...form, formation: e.target.value })}
-              placeholder="Diplômes, écoles..."
-            />
-          </div>
-          <div className="form-group">
-            <label>Expériences professionnelles</label>
-            <textarea
-              value={form.experiences}
-              onChange={(e) => setForm({ ...form, experiences: e.target.value })}
-              placeholder="Postes, dates, missions..."
-              rows={4}
-            />
-          </div>
-          <div className="form-group">
-            <label>Compétences</label>
-            <textarea
-              value={form.competences}
-              onChange={(e) => setForm({ ...form, competences: e.target.value })}
-              placeholder="Compétences techniques et transversales..."
-              rows={3}
-            />
-          </div>
-          <div className="form-group">
-            <label>Poste ou domaine visé</label>
-            <input
-              type="text"
-              value={form.poste}
-              onChange={(e) => setForm({ ...form, poste: e.target.value })}
-              placeholder="Ex: Développeur full-stack, Chef de projet..."
-            />
-          </div>
+          {mode === 'cv' ? (
+            <>
+              <div className="form-group">
+                <label>Mon CV (PDF) – optionnel</label>
+                <input
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={(e) => setCvFile(e.target.files?.[0] || null)}
+                  className="career-file-input"
+                />
+                <small>Envoyez votre CV en PDF (avec texte sélectionnable).</small>
+              </div>
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label>OU collez le texte de votre CV <span style={{ color: 'var(--error)' }}>*</span></label>
+                <textarea
+                  value={cvText}
+                  onChange={(e) => setCvText(e.target.value)}
+                  placeholder="Collez ici le texte de votre CV (même si mal formaté, l'IA saura le comprendre)..."
+                  rows={8}
+                />
+                <small>Si vous avez un PDF, vous pouvez aussi copier-coller son contenu ici. L'IA comprendra même si le formatage n'est pas parfait.</small>
+              </div>
+              <div className="form-group">
+                <label>Offre d'emploi – optionnel</label>
+                <textarea
+                  value={form.offreEmploi}
+                  onChange={(e) => setForm({ ...form, offreEmploi: e.target.value })}
+                  placeholder="Collez ici le texte de l'offre d'emploi..."
+                  rows={5}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <h3 style={{ marginBottom: '1rem' }}>Profil professionnel</h3>
+              <div className="form-group">
+                <label>Nom</label>
+                <input
+                  type="text"
+                  value={form.nom}
+                  onChange={(e) => setForm({ ...form, nom: e.target.value })}
+                  placeholder="Prénom Nom"
+                />
+              </div>
+              <div className="form-group">
+                <label>Formation</label>
+                <input
+                  type="text"
+                  value={form.formation}
+                  onChange={(e) => setForm({ ...form, formation: e.target.value })}
+                  placeholder="Diplômes, écoles..."
+                />
+              </div>
+              <div className="form-group">
+                <label>Expériences professionnelles</label>
+                <textarea
+                  value={form.experiences}
+                  onChange={(e) => setForm({ ...form, experiences: e.target.value })}
+                  placeholder="Postes, dates, missions..."
+                  rows={4}
+                />
+              </div>
+              <div className="form-group">
+                <label>Compétences</label>
+                <textarea
+                  value={form.competences}
+                  onChange={(e) => setForm({ ...form, competences: e.target.value })}
+                  placeholder="Compétences techniques et transversales..."
+                  rows={3}
+                />
+              </div>
+              <div className="form-group">
+                <label>Poste ou domaine visé</label>
+                <input
+                  type="text"
+                  value={form.poste}
+                  onChange={(e) => setForm({ ...form, poste: e.target.value })}
+                  placeholder="Ex: Développeur full-stack, Chef de projet..."
+                />
+              </div>
+              <div className="form-group">
+                <label>Offre d'emploi – optionnel</label>
+                <textarea
+                  value={form.offreEmploi}
+                  onChange={(e) => setForm({ ...form, offreEmploi: e.target.value })}
+                  placeholder="Collez ici le texte de l'offre d'emploi..."
+                  rows={5}
+                />
+              </div>
+            </>
+          )}
           {error && <p className="career-error">{error}</p>}
           <button type="submit" className="save-btn" disabled={loading} style={{ marginTop: '1rem' }}>
             {loading ? 'Génération...' : 'Générer CV et lettre'}
@@ -203,14 +311,32 @@ function CareerContent() {
         <>
           <section className="settings-section career-result">
             <h2>CV</h2>
-            <div className="career-block markdown-content">
+            <div ref={cvBlockRef} className="career-block markdown-content">
               <ReactMarkdown>{result.cv || '—'}</ReactMarkdown>
+            </div>
+            <div className="pdf-action-container">
+              <button
+                type="button"
+                className="download-pdf-btn"
+                onClick={() => downloadPdf(cvBlockRef, 'cv_adapte.pdf')}
+              >
+                Télécharger le CV en PDF
+              </button>
             </div>
           </section>
           <section className="settings-section career-result">
             <h2>Lettre de motivation</h2>
-            <div className="career-block markdown-content">
+            <div ref={lettreBlockRef} className="career-block markdown-content">
               <ReactMarkdown>{result.lettre || '—'}</ReactMarkdown>
+            </div>
+            <div className="pdf-action-container">
+              <button
+                type="button"
+                className="download-pdf-btn"
+                onClick={() => downloadPdf(lettreBlockRef, 'lettre_motivation.pdf')}
+              >
+                Télécharger la lettre en PDF
+              </button>
             </div>
           </section>
           <section className="settings-section career-result">

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '../../../backend/lib/db';
 import { getAuthFromRequest, unauthorizedResponse } from '../../../backend/lib/auth';
+import { getPrompt } from '../../../backend/lib/prompts';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,10 +19,7 @@ async function generateTitle(firstMessage, apiKey) {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
         messages: [
-          {
-            role: 'system',
-            content: 'Génère un titre de conversation très court (3-5 mots max) qui résume ce message utilisateur. Si c\'est du code, résume ce que fait le code (ex: "Script Python Hello World"). Ne mets pas de guillemets, pas de préfixe "Titre:", juste le texte brut.'
-          },
+          { role: 'system', content: getPrompt('chat.title_generation') || 'Génère un titre de conversation très court (3-5 mots max).' },
           { role: 'user', content: firstMessage }
         ],
         model: 'grok-4-latest',
@@ -145,7 +143,7 @@ export async function POST(request) {
       aiContent = imageData.data[0]?.url;
       messageType = 'image';
     } else {
-      let systemInstruction = 'Tu es un assistant utile et professionnel. Tu utilises le Markdown pour formater tes réponses, surtout pour le code.';
+      let systemInstruction = getPrompt('chat.default_system') || 'Tu es un assistant utile et professionnel.';
 
       const { data: chatRow } = await supabase.from('chats').select('agent_id').eq('id', chatId).single();
       if (chatRow?.agent_id) {
