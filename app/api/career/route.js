@@ -251,7 +251,11 @@ export async function POST(request) {
       cvJson = await parseCvToJson(cvContent, apiKey);
 
       const hasOffer = offreEmploi.trim().length > 0;
-      systemPrompt = getPrompt('career.json_system_from_cv_pdf') || getPrompt(hasOffer ? 'career.json_system_with_offer' : 'career.json_system');
+      if (hasOffer) {
+        systemPrompt = getPrompt('career.json_system_from_cv_with_offer') || getPrompt('career.json_system_with_offer');
+      } else {
+        systemPrompt = getPrompt('career.json_system_from_cv_pdf') || getPrompt('career.json_system');
+      }
       const offerBlock = hasOffer ? `\n\n--- Offre d'emploi ---\n${offreEmploi.trim()}` : '';
 
       if (cvJson) {
