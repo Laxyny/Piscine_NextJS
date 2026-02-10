@@ -18,16 +18,13 @@ async function extractPdfText(buffer) {
           const mod = await import('pdf-parse');
           pdfParse = mod.default || mod;
         } catch (importError) {
-          console.warn('pdf-parse not available, PDF extraction will fail');
-          throw new Error('PDF parsing module not available. Please install pdf-parse or use text input instead.');
+          throw new Error('PDF parsing module not available.');
         }
       }
     }
-    
     if (typeof pdfParse !== 'function') {
-      throw new Error('pdf-parse loaded but is not a function. Type: ' + typeof pdfParse);
+      throw new Error('pdf-parse loaded but is not a function.');
     }
-    
     const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
     const data = await pdfParse(buf);
     return (data && data.text) ? String(data.text).trim() : '';
@@ -35,6 +32,45 @@ async function extractPdfText(buffer) {
     console.error('PDF parse error:', e.message || e);
     throw e;
   }
+}
+
+function parseJsonSection(text, sectionName) {
+  const regex = new RegExp(`##\\s*${sectionName}\\s*\\n([\\s\\S]*?)(?=##\\s|$)`, 'i');
+  const match = text.match(regex);
+  if (!match) return null;
+  let raw = match[1].trim();
+  raw = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error(`Failed to parse ${sectionName}:`, e.message);
+    return null;
+  }
+}
+
+function parseStructuredResponse(text) {
+  const cvJson = parseJsonSection(text, 'CV_JSON');
+  const lettreJson = parseJsonSection(text, 'LETTRE_JSON');
+  const suggestionsMatch = text.match(/##\s*Suggestions\s*([\s\S]*?)$/i);
+  const suggestions = (suggestionsMatch && suggestionsMatch[1].trim()) || '';
+
+  if (cvJson || lettreJson) {
+    return {
+      cv: cvJson ? JSON.stringify(cvJson) : '{}',
+      lettre: lettreJson ? JSON.stringify(lettreJson) : '{}',
+      suggestions,
+      isJson: true
+    };
+  }
+
+  const cvMatch = text.match(/##\s*CV\s*([\s\S]*?)(?=##\s*Lettre|$)/i);
+  const lettreMatch = text.match(/##\s*Lettre\s*(?:de\s*motivation)?\s*([\s\S]*?)(?=##\s*Suggestions|$)/i);
+  return {
+    cv: (cvMatch && cvMatch[1].trim()) || '',
+    lettre: (lettreMatch && lettreMatch[1].trim()) || '',
+    suggestions,
+    isJson: false
+  };
 }
 
 export async function GET(request) {
@@ -71,17 +107,6 @@ export async function GET(request) {
   }
 }
 
-function parseStructuredResponse(text) {
-  const cvMatch = text.match(/##\s*CV\s*([\s\S]*?)(?=##\s*Lettre|$)/i);
-  const lettreMatch = text.match(/##\s*Lettre\s*(?:de\s*motivation)?\s*([\s\S]*?)(?=##\s*Suggestions|$)/i);
-  const suggestionsMatch = text.match(/##\s*Suggestions\s*([\s\S]*?)$/i);
-  return {
-    cv: (cvMatch && cvMatch[1].trim()) || '',
-    lettre: (lettreMatch && lettreMatch[1].trim()) || '',
-    suggestions: (suggestionsMatch && suggestionsMatch[1].trim()) || ''
-  };
-}
-
 async function parseCvToJson(cvText, apiKey) {
   try {
     const res = await fetch('https://api.x.ai/v1/chat/completions', {
@@ -94,11 +119,11 @@ async function parseCvToJson(cvText, apiKey) {
         messages: [
           {
             role: 'system',
-            content: 'Tu es un expert en parsing de CV. Extrais les informations du CV fourni, même si le formatage est mauvais ou incomplet. Retourne UNIQUEMENT un JSON valide, sans texte avant ni après. Utilise exactement cette structure:\n{\n  "nom": "Prénom Nom",\n  "email": "email@example.com",\n  "telephone": "06 12 34 56 78",\n  "adresse": "123 Rue Exemple, 34000 Ville",\n  "formation": "Liste des diplômes et formations, une par ligne",\n  "experiences": "Liste des expériences professionnelles avec dates et descriptions",\n  "competences": "Liste des compétences techniques et transversales",\n  "langues": "Langues parlées si mentionnées",\n  "autres": "Autres informations pertinentes"\n}\nSi une information n\'est pas présente dans le CV, utilise une chaîne vide "". Sois tolérant avec le formatage : même si le texte est mal structuré, extrais les informations correctement. Ne mets rien d\'autre que le JSON.'
+            content: 'Tu es un expert en parsing de CV. Extrais les informations du CV fourni, meme si le formatage est mauvais ou incomplet. Retourne UNIQUEMENT un JSON valide, sans texte avant ni apres. Utilise exactement cette structure:\n{\n  "nom": "Prenom Nom",\n  "email": "email@example.com",\n  "telephone": "06 12 34 56 78",\n  "adresse": "123 Rue Exemple, 34000 Ville",\n  "formation": "Liste des diplomes et formations, une par ligne",\n  "experiences": "Liste des experiences professionnelles avec dates et descriptions",\n  "competences": "Liste des competences techniques et transversales",\n  "langues": "Langues parlees si mentionnees",\n  "autres": "Autres informations pertinentes"\n}\nSi une information n\'est pas presente dans le CV, utilise une chaine vide "".'
           },
           {
             role: 'user',
-            content: `Extrais les informations de ce CV (même si mal formaté) et retourne-les en JSON:\n\n${cvText}`
+            content: `Extrais les informations de ce CV et retourne-les en JSON:\n\n${cvText}`
           }
         ],
         model: 'grok-4-latest',
@@ -114,13 +139,12 @@ async function parseCvToJson(cvText, apiKey) {
 
     const data = await res.json();
     const jsonText = data.choices?.[0]?.message?.content || '';
-    
     const cleanedJson = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
+
     try {
       return JSON.parse(cleanedJson);
     } catch (e) {
-      console.error('JSON parse error:', e, 'Raw text:', cleanedJson);
+      console.error('JSON parse error:', e);
       return null;
     }
   } catch (e) {
@@ -153,7 +177,7 @@ export async function POST(request) {
       mode = formData.get('mode') || '';
       offreEmploi = formData.get('offreEmploi') || '';
       cvText = formData.get('cvText') || '';
-      
+
       const file = formData.get('cvFile');
       if (file && file instanceof Blob && file.size > 0) {
         try {
@@ -163,7 +187,7 @@ export async function POST(request) {
           console.error('PDF extraction failed:', pdfError);
           if (!cvText.trim()) {
             return NextResponse.json(
-              { error: "Impossible d'extraire le texte du PDF. Veuillez coller le texte de votre CV dans le champ prévu, ou installez le module pdf-parse dans le conteneur Docker." },
+              { error: "Impossible d'extraire le texte du PDF. Veuillez coller le texte de votre CV dans le champ prevu." },
               { status: 400 }
             );
           }
@@ -192,32 +216,32 @@ export async function POST(request) {
     );
 
     const cvContent = (cvText.trim() || cvPdfText.trim()).trim();
-    
+
     if (mode === 'cv') {
       if (!cvContent || cvContent.length < 30) {
         return NextResponse.json(
-          { error: "Fournissez votre CV : soit un fichier PDF avec texte sélectionnable, soit collez le texte de votre CV dans le champ prévu." },
+          { error: "Fournissez votre CV : soit un fichier PDF avec texte selectionnable, soit collez le texte." },
           { status: 400 }
         );
       }
     } else if (mode === 'form') {
       if (!hasFormContent) {
         return NextResponse.json(
-          { error: 'Renseignez au moins un champ (nom, formation, expériences, compétences ou poste).' },
+          { error: 'Renseignez au moins un champ.' },
           { status: 400 }
         );
       }
     } else {
       if (!hasFormContent && !cvContent) {
         return NextResponse.json(
-          { error: 'Renseignez au moins un champ ou envoyez un CV (PDF ou texte).' },
+          { error: 'Renseignez au moins un champ ou envoyez un CV.' },
           { status: 400 }
         );
       }
     }
 
     const apiKey = process.env.GROK_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: 'API non configurée' }, { status: 500 });
+    if (!apiKey) return NextResponse.json({ error: 'API non configuree' }, { status: 500 });
 
     let systemPrompt;
     let userPrompt;
@@ -225,36 +249,36 @@ export async function POST(request) {
 
     if (cvContent) {
       cvJson = await parseCvToJson(cvContent, apiKey);
-      
-      systemPrompt = getPrompt('career.system_from_cv_pdf') || getPrompt('career.system_with_offer');
-      const offerBlock = offreEmploi.trim() ? `\n\n--- Offre d'emploi ---\n${offreEmploi.trim()}` : '';
-      
+
+      const hasOffer = offreEmploi.trim().length > 0;
+      systemPrompt = getPrompt('career.json_system_from_cv_pdf') || getPrompt(hasOffer ? 'career.json_system_with_offer' : 'career.json_system');
+      const offerBlock = hasOffer ? `\n\n--- Offre d'emploi ---\n${offreEmploi.trim()}` : '';
+
       if (cvJson) {
         const jsonStr = JSON.stringify(cvJson, null, 2);
-        userPrompt = `IMPORTANT : Utilise UNIQUEMENT les informations du CV structuré ci-dessous. Le nom, les coordonnées, la formation, les expériences et les compétences doivent venir EXACTEMENT de ce JSON. N'invente rien.\n\n--- CV du candidat (format JSON) ---\n${jsonStr}${offerBlock}`;
+        userPrompt = `IMPORTANT : Utilise UNIQUEMENT les informations du CV ci-dessous. N'invente rien.\n\n--- CV du candidat (JSON) ---\n${jsonStr}${offerBlock}`;
       } else {
-        console.warn('CV JSON parsing failed, using raw text');
-        userPrompt = `IMPORTANT : Utilise UNIQUEMENT les informations ci-dessous pour le nom, les coordonnées, la formation, les expériences et les compétences. N'invente rien. Même si le texte est mal formaté, extrais les informations correctement.\n\n--- CV actuel du candidat ---\n${cvContent}${offerBlock}`;
+        userPrompt = `IMPORTANT : Utilise UNIQUEMENT les informations ci-dessous. N'invente rien.\n\n--- CV actuel ---\n${cvContent}${offerBlock}`;
       }
-      
-      if (!offreEmploi.trim()) userPrompt += '\n\n(Pas d\'offre fournie : produis un CV amélioré et une lettre type.)';
+
+      if (!hasOffer) userPrompt += "\n\n(Pas d'offre fournie : produis un CV ameliore et une lettre type.)";
     } else {
       const profileText = [
         nom && `Nom: ${nom}`,
         formation && `Formation: ${formation}`,
-        experiences && `Expériences professionnelles: ${experiences}`,
-        competences && `Compétences: ${competences}`,
-        poste && `Poste ou domaine visé: ${poste}`
+        experiences && `Experiences professionnelles: ${experiences}`,
+        competences && `Competences: ${competences}`,
+        poste && `Poste ou domaine vise: ${poste}`
       ]
         .filter(Boolean)
         .join('\n');
 
       if (offreEmploi.trim()) {
-        systemPrompt = getPrompt('career.system_with_offer');
+        systemPrompt = getPrompt('career.json_system_with_offer');
         userPrompt = `Profil professionnel:\n${profileText}\n\n--- Offre d'emploi ---\n${offreEmploi.trim()}`;
       } else {
-        systemPrompt = getPrompt('career.system');
-        userPrompt = `Voici le profil professionnel à partir duquel générer un CV, une lettre de motivation et des suggestions:\n\n${profileText}`;
+        systemPrompt = getPrompt('career.json_system');
+        userPrompt = `Voici le profil professionnel:\n\n${profileText}`;
       }
     }
 

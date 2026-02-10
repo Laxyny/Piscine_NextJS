@@ -565,6 +565,7 @@ html, body {
 
 .career-page-container {
   padding-bottom: 0;
+  max-width: 1200px;
 }
 
 .career-refine-bar {
@@ -1274,3 +1275,4 @@ html, body {
 
 @import './pdf-button.css';
 @import './agent-styles.css';
+@import './career-templates.css';
