@@ -119,7 +119,7 @@ async function parseCvToJson(cvText, apiKey) {
         messages: [
           {
             role: 'system',
-            content: 'Tu es un expert en parsing de CV. Extrais les informations du CV fourni, meme si le formatage est mauvais ou incomplet. Retourne UNIQUEMENT un JSON valide, sans texte avant ni apres. Utilise exactement cette structure:\n{\n  "nom": "Prenom Nom",\n  "email": "email@example.com",\n  "telephone": "06 12 34 56 78",\n  "adresse": "123 Rue Exemple, 34000 Ville",\n  "formation": "Liste des diplomes et formations, une par ligne",\n  "experiences": "Liste des experiences professionnelles avec dates et descriptions",\n  "competences": "Liste des competences techniques et transversales",\n  "langues": "Langues parlees si mentionnees",\n  "autres": "Autres informations pertinentes"\n}\nSi une information n\'est pas presente dans le CV, utilise une chaine vide "".'
+            content: getPrompt('career.cv_parsing')
           },
           {
             role: 'user',
