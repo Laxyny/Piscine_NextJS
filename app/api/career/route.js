@@ -9,22 +9,27 @@ async function extractPdfText(buffer) {
   try {
     let pdfParse;
     try {
-      pdfParse = require('pdf-parse');
+      pdfParse = require('pdf-parse/lib/pdf-parse');
     } catch (requireError) {
       try {
-        const mod = await import('pdf-parse');
-        pdfParse = mod.default || mod;
-      } catch (importError) {
-        console.warn('pdf-parse not available, PDF extraction will fail');
-        throw new Error('PDF parsing module not available. Please install pdf-parse or use text input instead.');
+        pdfParse = require('pdf-parse');
+      } catch (requireError2) {
+        try {
+          const mod = await import('pdf-parse');
+          pdfParse = mod.default || mod;
+        } catch (importError) {
+          console.warn('pdf-parse not available, PDF extraction will fail');
+          throw new Error('PDF parsing module not available. Please install pdf-parse or use text input instead.');
+        }
       }
     }
     
     if (typeof pdfParse !== 'function') {
-      throw new Error('pdf-parse is not a function');
+      throw new Error('pdf-parse loaded but is not a function. Type: ' + typeof pdfParse);
     }
     
-    const data = await pdfParse(Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer));
+    const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+    const data = await pdfParse(buf);
     return (data && data.text) ? String(data.text).trim() : '';
   } catch (e) {
     console.error('PDF parse error:', e.message || e);
