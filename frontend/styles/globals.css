@@ -508,6 +508,186 @@ html, body {
   border-color: var(--primary-color);
 }
 
+.career-history-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.career-history-item-row .career-history-item {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.career-history-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.career-history-actions .edit-btn,
+.career-history-actions .delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.career-history-item-row:hover .edit-btn,
+.career-history-item-row:hover .delete-btn {
+  opacity: 0.6;
+}
+
+.career-history-actions .edit-btn:hover {
+  opacity: 1 !important;
+  background: rgba(0,0,0,0.05);
+}
+
+.career-history-actions .delete-btn:hover {
+  opacity: 1 !important;
+  color: #ff3b30;
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.career-history-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.career-history-edit .rename-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.career-page-container {
+  padding-bottom: 0;
+}
+
+.career-refine-bar {
+  position: sticky;
+  bottom: 0;
+  background: var(--chat-bg);
+  border-top: 1px solid var(--border-color);
+  border-radius: 16px 16px 0 0;
+  padding: 1rem 1.5rem;
+  margin-top: 1rem;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+  z-index: 10;
+}
+
+.career-refine-messages {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  scrollbar-width: thin;
+}
+
+.career-refine-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.career-refine-msg-label {
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.career-refine-msg-user .career-refine-msg-label {
+  background: var(--primary-color);
+  color: white;
+}
+
+.career-refine-msg-assistant .career-refine-msg-label {
+  background: var(--bubble-ai-bg);
+  color: var(--text-secondary);
+}
+
+.career-refine-msg-text {
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.career-refine-msg-assistant .career-refine-msg-text {
+  color: var(--text-secondary);
+}
+
+.career-refine-form {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.career-refine-input {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.career-refine-input:focus {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+.career-refine-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.career-refine-send {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary-gradient);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.career-refine-send:hover:not(:disabled) {
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
+}
+
+.career-refine-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--text-secondary);
+  box-shadow: none;
+}
+
+.career-refine-msg .typing {
+  padding: 0;
+  height: auto;
+}
+
 .profile-info {
     display: flex;
     align-items: center;
