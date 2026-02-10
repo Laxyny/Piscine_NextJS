@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '../../../backend/lib/db';
 import { getAuthFromRequest, unauthorizedResponse } from '../../../backend/lib/auth';
-import { getPrompt } from '../../../backend/lib/prompts';w
+import { getPrompt } from '../../../backend/lib/prompts';
+
 export const dynamic = 'force-dynamic';
 
 async function checkChatOwner(supabase, chatId, uid) {
