@@ -94,7 +94,8 @@ export function AuthProvider({ children }) {
       return;
     }
     try {
-      await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
     } catch (error) {
       console.error('Sign up failed', error);
       throw error;
@@ -107,7 +108,8 @@ export function AuthProvider({ children }) {
       return;
     }
     try {
-      await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
     } catch (error) {
       console.error('Sign in failed', error);
       throw error;

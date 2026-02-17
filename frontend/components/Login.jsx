@@ -2,15 +2,7 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
-function getAuthErrorMessage(err) {
-  const msg = err?.message || '';
-  if (msg.includes('already registered') || msg.includes('already in use')) return 'Cet email est déjà utilisé.';
-  if (msg.includes('Invalid login')) return 'Email ou mot de passe incorrect.';
-  if (msg.includes('Email not confirmed')) return 'Veuillez confirmer votre email.';
-  if (msg.includes('Password')) return 'Le mot de passe doit contenir au moins 6 caractères.';
-  if (msg.includes('rate limit') || msg.includes('too many')) return 'Trop de tentatives. Réessayez plus tard.';
-  return msg || 'Une erreur est survenue.';
-}
+
 
 export default function Login() {
   const { login, loginWithGithub, signUpWithEmail, signInWithEmail } = useAuth();
@@ -19,19 +11,31 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [errorField, setErrorField] = useState(null); // 'email', 'password', 'both', or null
   const [loading, setLoading] = useState(false);
 
   const handleEmailAuth = async (e) => {
     e.preventDefault();
     setError('');
-    if (!email.trim() || !password) {
-      setError('Renseignez l\'email et le mot de passe.');
+    setErrorField(null);
+
+    // Basic Validation
+    if (!email.trim()) {
+      setError('L\'email est requis.');
+      setErrorField('email');
+      return;
+    }
+    if (!password) {
+      setError('Le mot de passe est requis.');
+      setErrorField('password');
       return;
     }
     if (password.length < 6 && mode === 'inscription') {
       setError('Le mot de passe doit contenir au moins 6 caractères.');
+      setErrorField('password');
       return;
     }
+
     setLoading(true);
     try {
       if (mode === 'inscription') {
@@ -40,10 +44,51 @@ export default function Login() {
         await signInWithEmail(email.trim(), password);
       }
     } catch (err) {
-      setError(getAuthErrorMessage(err) || err.message);
+      console.error("Auth Error:", err); // Pour le débogage
+      const msg = err?.message || '';
+      let userMsg = msg || 'Une erreur est survenue.';
+      let field = 'both';
+
+      // Tentative de détection précise (dépend de la config Supabase)
+      if (msg.toLowerCase().includes('user not found') || msg.toLowerCase().includes('cet email n\'existe pas')) {
+        userMsg = 'Cet email n\'est pas enregistré.';
+        field = 'email';
+      }
+      else if (msg.toLowerCase().includes('wrong password') || msg.toLowerCase().includes('incorrect password')) {
+        userMsg = 'Mot de passe incorrect.';
+        field = 'password';
+      }
+      else if (msg.includes('already registered') || msg.includes('already in use')) {
+        userMsg = 'Cet email est déjà utilisé.';
+        field = 'email';
+      } else if (msg.includes('Invalid login')) {
+        // Supabase renvoie souvent ceci par sécurité pour ne pas dévoiler si l'email existe
+        userMsg = 'Email ou mot de passe incorrect.';
+        field = 'both';
+      } else if (msg.includes('Email not confirmed')) {
+        userMsg = 'Veuillez confirmer votre email.';
+        field = 'email';
+      } else if (msg.includes('Password')) {
+        userMsg = 'Le mot de passe doit contenir au moins 6 caractères.';
+        field = 'password';
+      } else if (msg.includes('rate limit') || msg.includes('too many')) {
+        userMsg = 'Trop de tentatives. Réessayez plus tard.';
+        field = 'both';
+      }
+
+      setError(userMsg);
+      setErrorField(field);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getInputClass = (fieldName) => {
+    const baseClass = "login-input";
+    if (errorField === fieldName || errorField === 'both') {
+      return `${baseClass} error`;
+    }
+    return baseClass;
   };
 
   return (
@@ -58,9 +103,9 @@ export default function Login() {
               type="email"
               placeholder="Email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); if (errorField === 'email' || errorField === 'both') setErrorField(null); }}
               autoComplete="email"
-              className="login-input"
+              className={getInputClass('email')}
             />
           </div>
           <div className="form-group" style={{ position: 'relative' }}>
@@ -68,9 +113,9 @@ export default function Login() {
               type={showPassword ? "text" : "password"}
               placeholder="Mot de passe (min. 6 caractères)"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); if (errorField === 'password' || errorField === 'both') setErrorField(null); }}
               autoComplete={mode === 'inscription' ? 'new-password' : 'current-password'}
-              className="login-input"
+              className={getInputClass('password')}
               style={{ paddingRight: '40px' }}
             />
             <button
@@ -113,7 +158,7 @@ export default function Login() {
             <button
               type="button"
               className="login-switch-mode"
-              onClick={() => { setMode(mode === 'connexion' ? 'inscription' : 'connexion'); setError(''); }}
+              onClick={() => { setMode(mode === 'connexion' ? 'inscription' : 'connexion'); setError(''); setErrorField(null); }}
             >
               {mode === 'connexion' ? 'Créer un compte' : 'Déjà un compte ? Se connecter'}
             </button>
