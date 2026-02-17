@@ -41,6 +41,12 @@ function CareerContent() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [analyzeFile, setAnalyzeFile] = useState(null);
+  const [analyzeCvText, setAnalyzeCvText] = useState('');
+  const [analyzeOfferText, setAnalyzeOfferText] = useState('');
+  const [analyzeLoading, setAnalyzeLoading] = useState(false);
+
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -209,6 +215,41 @@ function CareerContent() {
     })();
   }, [result?.id, getHeaders]);
 
+  const handleAnalyze = async (e) => {
+    e.preventDefault();
+    setError('');
+    setAnalysisResult(null);
+    if (!analyzeFile && !analyzeCvText.trim()) {
+      setError('Fournissez votre CV (PDF ou texte).');
+      return;
+    }
+    if (!analyzeOfferText.trim()) {
+      setError("Collez le texte de l'offre d'emploi.");
+      return;
+    }
+    setAnalyzeLoading(true);
+    try {
+      const headers = await getHeaders();
+      const fd = new FormData();
+      fd.set('offerText', analyzeOfferText.trim());
+      if (analyzeFile) fd.set('cvFile', analyzeFile);
+      if (analyzeCvText.trim()) fd.set('cvText', analyzeCvText.trim());
+      const res = await fetch('/api/career/analyze', { method: 'POST', headers, body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      setAnalysisResult(data.analysis);
+    } catch (e) { setError(e.message || "Erreur lors de l'analyse."); }
+    finally { setAnalyzeLoading(false); }
+  };
+
+  const resetAnalysis = () => {
+    setAnalysisResult(null);
+    setAnalyzeFile(null);
+    setAnalyzeCvText('');
+    setAnalyzeOfferText('');
+    setError('');
+  };
+
   const downloadPdf = async (ref, filename) => {
     if (!ref?.current) return;
     try {
@@ -280,45 +321,208 @@ function CareerContent() {
         </section>
       )}
 
-      {!result && (
+      {!result && !analysisResult && (
         <section className="settings-section">
           <h2>Comment souhaitez-vous proceder ?</h2>
           <div className="career-mode-toggle">
             <button type="button" className={mode === 'cv' ? 'save-btn' : 'career-mode-btn'} onClick={() => { setMode('cv'); setError(''); }}>J'envoie mon CV (PDF)</button>
             <button type="button" className={mode === 'form' ? 'save-btn' : 'career-mode-btn'} onClick={() => { setMode('form'); setError(''); setCvFile(null); setCvText(''); }}>Je remplis le formulaire</button>
+            <button type="button" className={mode === 'analyze' ? 'save-btn' : 'career-mode-btn'} onClick={() => { setMode('analyze'); setError(''); }}>Analyser CV vs Offre</button>
           </div>
-          <form onSubmit={handleSubmit} className="career-form">
-            {mode === 'cv' ? (
-              <>
-                <div className="form-group">
-                  <label>Mon CV (PDF) - optionnel</label>
-                  <input type="file" accept=".pdf,application/pdf" onChange={e => setCvFile(e.target.files?.[0] || null)} className="career-file-input" />
-                </div>
-                <div className="form-group" style={{ marginTop: '1rem' }}>
-                  <label>OU collez le texte de votre CV</label>
-                  <textarea value={cvText} onChange={e => setCvText(e.target.value)} placeholder="Collez ici le texte de votre CV..." rows={8} />
-                </div>
-                <div className="form-group">
-                  <label>Offre d'emploi - optionnel</label>
-                  <textarea value={form.offreEmploi} onChange={e => setForm({ ...form, offreEmploi: e.target.value })} placeholder="Collez ici le texte de l'offre d'emploi..." rows={5} />
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="form-group"><label>Nom</label><input type="text" value={form.nom} onChange={e => setForm({ ...form, nom: e.target.value })} placeholder="Prenom Nom" /></div>
-                <div className="form-group"><label>Formation</label><input type="text" value={form.formation} onChange={e => setForm({ ...form, formation: e.target.value })} placeholder="Diplomes, ecoles..." /></div>
-                <div className="form-group"><label>Experiences</label><textarea value={form.experiences} onChange={e => setForm({ ...form, experiences: e.target.value })} placeholder="Postes, dates, missions..." rows={4} /></div>
-                <div className="form-group"><label>Competences</label><textarea value={form.competences} onChange={e => setForm({ ...form, competences: e.target.value })} placeholder="Competences techniques..." rows={3} /></div>
-                <div className="form-group"><label>Poste vise</label><input type="text" value={form.poste} onChange={e => setForm({ ...form, poste: e.target.value })} placeholder="Developpeur, Chef de projet..." /></div>
-                <div className="form-group"><label>Offre d'emploi - optionnel</label><textarea value={form.offreEmploi} onChange={e => setForm({ ...form, offreEmploi: e.target.value })} placeholder="Collez ici l'offre d'emploi..." rows={5} /></div>
-              </>
-            )}
-            {error && <p className="career-error">{error}</p>}
-            <button type="submit" className="save-btn" disabled={loading} style={{ marginTop: '1rem' }}>
-              {loading ? 'Generation en cours...' : 'Generer CV et lettre'}
-            </button>
-          </form>
+
+          {mode === 'analyze' ? (
+            <form onSubmit={handleAnalyze} className="career-form">
+              <div className="form-group">
+                <label>Mon CV (PDF)</label>
+                <input type="file" accept=".pdf,application/pdf" onChange={e => setAnalyzeFile(e.target.files?.[0] || null)} className="career-file-input" />
+              </div>
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label>OU collez le texte de votre CV</label>
+                <textarea value={analyzeCvText} onChange={e => setAnalyzeCvText(e.target.value)} placeholder="Collez ici le texte de votre CV..." rows={8} />
+              </div>
+              <div className="form-group">
+                <label>Offre d'emploi</label>
+                <textarea value={analyzeOfferText} onChange={e => setAnalyzeOfferText(e.target.value)} placeholder="Collez ici le texte complet de l'offre d'emploi..." rows={6} />
+              </div>
+              {error && <p className="career-error">{error}</p>}
+              <button type="submit" className="save-btn" disabled={analyzeLoading} style={{ marginTop: '1rem' }}>
+                {analyzeLoading ? 'Analyse en cours...' : 'Lancer l\'analyse'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="career-form">
+              {mode === 'cv' ? (
+                <>
+                  <div className="form-group">
+                    <label>Mon CV (PDF) - optionnel</label>
+                    <input type="file" accept=".pdf,application/pdf" onChange={e => setCvFile(e.target.files?.[0] || null)} className="career-file-input" />
+                  </div>
+                  <div className="form-group" style={{ marginTop: '1rem' }}>
+                    <label>OU collez le texte de votre CV</label>
+                    <textarea value={cvText} onChange={e => setCvText(e.target.value)} placeholder="Collez ici le texte de votre CV..." rows={8} />
+                  </div>
+                  <div className="form-group">
+                    <label>Offre d'emploi - optionnel</label>
+                    <textarea value={form.offreEmploi} onChange={e => setForm({ ...form, offreEmploi: e.target.value })} placeholder="Collez ici le texte de l'offre d'emploi..." rows={5} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="form-group"><label>Nom</label><input type="text" value={form.nom} onChange={e => setForm({ ...form, nom: e.target.value })} placeholder="Prenom Nom" /></div>
+                  <div className="form-group"><label>Formation</label><input type="text" value={form.formation} onChange={e => setForm({ ...form, formation: e.target.value })} placeholder="Diplomes, ecoles..." /></div>
+                  <div className="form-group"><label>Experiences</label><textarea value={form.experiences} onChange={e => setForm({ ...form, experiences: e.target.value })} placeholder="Postes, dates, missions..." rows={4} /></div>
+                  <div className="form-group"><label>Competences</label><textarea value={form.competences} onChange={e => setForm({ ...form, competences: e.target.value })} placeholder="Competences techniques..." rows={3} /></div>
+                  <div className="form-group"><label>Poste vise</label><input type="text" value={form.poste} onChange={e => setForm({ ...form, poste: e.target.value })} placeholder="Developpeur, Chef de projet..." /></div>
+                  <div className="form-group"><label>Offre d'emploi - optionnel</label><textarea value={form.offreEmploi} onChange={e => setForm({ ...form, offreEmploi: e.target.value })} placeholder="Collez ici l'offre d'emploi..." rows={5} /></div>
+                </>
+              )}
+              {error && <p className="career-error">{error}</p>}
+              <button type="submit" className="save-btn" disabled={loading} style={{ marginTop: '1rem' }}>
+                {loading ? 'Generation en cours...' : 'Generer CV et lettre'}
+              </button>
+            </form>
+          )}
         </section>
+      )}
+
+      {analysisResult && (
+        <>
+          <section className="settings-section analysis-header">
+            <div className="analysis-top-row">
+              <div>
+                <h2 style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: '0.25rem' }}>{analysisResult.jobTitle || 'Analyse de pertinence'}</h2>
+                {analysisResult.company && <p className="analysis-company">{analysisResult.company}</p>}
+                {analysisResult.candidateName && <p className="analysis-candidate">{analysisResult.candidateName}</p>}
+              </div>
+              <div className="quiz-score-circle" data-percentage={analysisResult.overallScore}>
+                <svg viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r="52" className="quiz-score-bg" />
+                  <circle cx="60" cy="60" r="52" className="quiz-score-fill"
+                    style={{ strokeDasharray: `${(analysisResult.overallScore / 100) * 327} 327` }} />
+                </svg>
+                <div className="quiz-score-value">
+                  <span className="quiz-score-number">{analysisResult.overallScore}%</span>
+                  <span className="quiz-score-label">pertinence</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="analysis-global-feedback">{analysisResult.globalFeedback}</p>
+          </section>
+
+          {analysisResult.categories && analysisResult.categories.length > 0 && (
+            <section className="settings-section">
+              <h2>Scores par categorie</h2>
+              <div className="analysis-categories">
+                {analysisResult.categories.map((cat, i) => (
+                  <div key={i} className="analysis-category">
+                    <div className="analysis-category-header">
+                      <span className="analysis-category-name">{cat.name}</span>
+                      <span className="analysis-category-score">{cat.score}%</span>
+                    </div>
+                    <div className="analysis-bar">
+                      <div
+                        className={`analysis-bar-fill ${cat.score >= 70 ? 'high' : cat.score >= 40 ? 'medium' : 'low'}`}
+                        style={{ width: `${cat.score}%` }}
+                      />
+                    </div>
+                    <p className="analysis-category-detail">{cat.details}</p>
+                    <span className="analysis-category-weight">Poids : {cat.weight}%</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {analysisResult.skillsMatch && analysisResult.skillsMatch.length > 0 && (
+            <section className="settings-section">
+              <h2>Correspondance des competences</h2>
+              <div className="analysis-skills-grid">
+                {analysisResult.skillsMatch.map((s, i) => (
+                  <div key={i} className={`analysis-skill-card ${s.status}`}>
+                    <div className="analysis-skill-header">
+                      <span className="analysis-skill-name">{s.skill}</span>
+                      <span className={`analysis-skill-badge ${s.status}`}>
+                        {s.status === 'match' && 'Correspond'}
+                        {s.status === 'partial' && 'Partiel'}
+                        {s.status === 'missing' && 'Absent'}
+                      </span>
+                    </div>
+                    <p className="analysis-skill-detail">{s.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {analysisResult.experienceMatch && (
+            <section className="settings-section">
+              <h2>Experience professionnelle</h2>
+              <div className="analysis-experience">
+                <div className="analysis-exp-row">
+                  <span className="analysis-exp-label">Demande par l'offre</span>
+                  <span className="analysis-exp-value">{analysisResult.experienceMatch.requiredYears}</span>
+                </div>
+                <div className="analysis-exp-row">
+                  <span className="analysis-exp-label">Experience du candidat</span>
+                  <span className="analysis-exp-value">{analysisResult.experienceMatch.candidateYears}</span>
+                </div>
+                {analysisResult.experienceMatch.relevantExperiences && analysisResult.experienceMatch.relevantExperiences.length > 0 && (
+                  <div className="analysis-exp-list">
+                    <h3>Experiences pertinentes</h3>
+                    <ul className="quiz-feedback-list quiz-strengths">
+                      {analysisResult.experienceMatch.relevantExperiences.map((exp, i) => <li key={i}>{exp}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {analysisResult.experienceMatch.gaps && analysisResult.experienceMatch.gaps.length > 0 && (
+                  <div className="analysis-exp-list">
+                    <h3>Lacunes identifiees</h3>
+                    <ul className="quiz-feedback-list quiz-improvements">
+                      {analysisResult.experienceMatch.gaps.map((gap, i) => <li key={i}>{gap}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          <section className="settings-section">
+            <div className="analysis-verdict-grid">
+              {analysisResult.strengths && analysisResult.strengths.length > 0 && (
+                <div className="quiz-feedback-section">
+                  <h3>Points forts</h3>
+                  <ul className="quiz-feedback-list quiz-strengths">
+                    {analysisResult.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+              )}
+              {analysisResult.weaknesses && analysisResult.weaknesses.length > 0 && (
+                <div className="quiz-feedback-section">
+                  <h3>Points faibles</h3>
+                  <ul className="quiz-feedback-list quiz-improvements">
+                    {analysisResult.weaknesses.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {analysisResult.recommendations && analysisResult.recommendations.length > 0 && (
+            <section className="settings-section">
+              <h2>Recommandations</h2>
+              <div className="analysis-recommendations">
+                {analysisResult.recommendations.map((r, i) => (
+                  <div key={i} className="analysis-recommendation">{r}</div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div className="quiz-results-actions">
+            <button type="button" className="save-btn" onClick={resetAnalysis}>Nouvelle analyse</button>
+          </div>
+        </>
       )}
 
       {result && (
